@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}HotspotPro{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23ff4d1c'/><path d='M8 16.5a10 10 0 0 1 16 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><path d='M11 19.5a6 6 0 0 1 10 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><circle cx='16' cy='23' r='1.5' fill='white'/></svg>">
+<style>
+:root {
+  --accent:#ff4d1c; --ink:#0a0a12; --paper:#f0f4ff; --dim:#6b6b7a;
+  --white:#fff; --border:rgba(10,10,18,.09); --green:#22c55e;
+  --red:#ef4444; --blue:#3b82f6; --gold:#f5a623;
+  --sb-bg:#0f1535; --sb-bg2:#162048; --sb-accent:#ff4d1c;
+  --fh:'Times New Roman','Times',Georgia,serif;
+  --fb:Arial,'Helvetica Neue',Helvetica,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--fb);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;display:flex}
+
+/* ══ SIDEBAR ══ */
+.sidebar{
+  width:240px;min-height:100vh;height:100%;
+  background:linear-gradient(180deg,#0f1535 0%,#162048 100%);
+  display:flex;flex-direction:column;flex-shrink:0;
+  position:relative;z-index:50;overflow:hidden;
+  box-shadow:4px 0 24px rgba(0,0,0,.18);
+}
+
+.sb-header{
+  padding:1.2rem 1.1rem 1rem;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;gap:.7rem;
+}
+.sb-logo-icon{
+  width:34px;height:34px;background:var(--accent);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 2px 12px rgba(255,77,28,.35);
+}
+.sb-logo-text{
+  font-family:var(--fh);font-weight:700;font-style:italic;font-size:1.1rem;
+  color:#fff;letter-spacing:-.01em;text-decoration:none;
+}
+.sb-logo-text span{color:var(--accent);font-style:normal}
+
+/* Avatar utilisateur */
+.sb-user-block{
+  padding:1rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;gap:.75rem;
+}
+.sb-avatar{
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;color:#fff;font-size:.95rem;flex-shrink:0;
+  border:2px solid rgba(255,255,255,.15);position:relative;
+}
+.sb-avatar::after{
+  content:'';position:absolute;bottom:1px;right:1px;
+  width:9px;height:9px;background:#22c55e;border-radius:50%;
+  border:2px solid #162048;
+}
+.sb-uinfo{overflow:hidden;flex:1;min-width:0}
+.sb-uname{font-size:.82rem;font-weight:bold;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-uemail{font-size:.68rem;color:rgba(255,255,255,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Nav */
+.sb-nav{padding:.8rem 0;flex:1;overflow-y:auto;overflow-x:hidden}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-track{background:transparent}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
+
+.sb-section{margin-bottom:.3rem}
+.sb-section-label{
+  font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(255,255,255,.25);padding:.5rem 1.3rem .25rem;font-weight:bold;
+}
+.sb-item{
+  display:flex;align-items:center;gap:.7rem;padding:.6rem 1.3rem;
+  color:rgba(255,255,255,.48);text-decoration:none;font-size:.84rem;
+  font-weight:600;transition:all .15s;position:relative;
+  border-radius:0;margin:0 .5rem;border-radius:9px;
+}
+.sb-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.07)}
+.sb-item.active{
+  color:#fff;background:rgba(255,77,28,.22);
+}
+.sb-item.active::before{
+  content:'';position:absolute;left:-8px;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;background:var(--accent);border-radius:10px;
+}
+.sb-icon{
+  width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:.88rem;flex-shrink:0;
+  background:rgba(255,255,255,.07);transition:background .15s;
+}
+.sb-item.active .sb-icon{background:rgba(255,77,28,.3)}
+.sb-item:hover .sb-icon{background:rgba(255,255,255,.12)}
+.sb-text{white-space:nowrap}
+
+/* Footer sidebar */
+.sb-footer{
+  padding:.9rem 1.1rem;border-top:1px solid rgba(255,255,255,.07);
+}
+.sb-version{font-size:.65rem;color:rgba(255,255,255,.2);text-align:center;margin-bottom:.5rem}
+.sb-logout{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.5rem .8rem;border-radius:8px;
+  color:rgba(255,255,255,.38);text-decoration:none;font-size:.78rem;
+  font-weight:600;transition:all .18s;
+}
+.sb-logout:hover{color:#fff;background:rgba(255,77,28,.15)}
+
+/* ══ MAIN ══ */
+.main{flex:1;display:flex;flex-direction:column;min-height:100vh;overflow:hidden;min-width:0}
+
+.topbar{
+  height:56px;background:var(--white);border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 1.6rem;flex-shrink:0;z-index:40;
+  box-shadow:0 1px 0 var(--border);
+}
+.topbar-left{display:flex;align-items:center;gap:.8rem}
+.topbar-title{
+  font-family:var(--fh);font-weight:700;font-style:italic;
+  font-size:1rem;letter-spacing:-.01em;color:var(--ink);
+}
+.topbar-subtitle{font-size:.75rem;color:var(--dim);margin-top:.05rem}
+.topbar-right{display:flex;gap:.6rem;align-items:center}
+
+/* Topbar avatar */
+.tb-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;color:#fff;font-size:.82rem;cursor:pointer;
+  border:2px solid var(--border);
+}
+.tb-user-info{text-align:right}
+.tb-uname{font-size:.82rem;font-weight:bold;color:var(--ink)}
+.tb-uemail{font-size:.7rem;color:var(--dim)}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:.3rem;color:var(--ink)}
+
+.content{flex:1;overflow-y:auto;padding:1.5rem 1.6rem;min-height:0;background:var(--paper)}
+
+/* ══ COMPONENTS ══ */
+.badge{display:inline-block;padding:.2rem .65rem;border-radius:100px;font-size:.69rem;font-weight:bold;font-family:var(--fb)}
+.badge-plan{background:rgba(255,77,28,.1);color:var(--accent)}
+.badge-active{background:rgba(34,197,94,.1);color:#15803d}
+.badge-expired{background:rgba(239,68,68,.1);color:#991b1b}
+.badge-green{background:rgba(34,197,94,.1);color:#15803d}
+.badge-red{background:rgba(239,68,68,.1);color:#991b1b}
+.badge-yellow{background:rgba(245,166,35,.12);color:#92400e}
+.badge-blue{background:rgba(59,130,246,.1);color:#1d4ed8}
+.badge-gray{background:rgba(107,107,122,.1);color:#374151}
+
+/* Cards */
+.card{
+  background:var(--white);border:1px solid var(--border);border-radius:14px;padding:1.3rem;
+  animation:cardIn .4s ease forwards;
+  box-shadow:0 2px 8px rgba(10,10,18,.04);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card-title{
+  font-family:var(--fh);font-weight:700;font-style:italic;
+  font-size:.98rem;margin-bottom:1.1rem;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:.4rem;
+}
+
+/* Stat cards style PassiWiFi */
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.4rem}
+.stat-card{
+  background:var(--white);border:1px solid var(--border);border-radius:14px;
+  padding:1.2rem 1.3rem;position:relative;overflow:hidden;
+  box-shadow:0 2px 8px rgba(10,10,18,.04);
+  animation:cardIn .4s ease forwards;
+}
+.stat-card:nth-child(1){animation-delay:.05s}
+.stat-card:nth-child(2){animation-delay:.1s}
+.stat-card:nth-child(3){animation-delay:.15s}
+.stat-card:nth-child(4){animation-delay:.2s}
+.stat-card-icon{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;margin-bottom:.9rem;float:right;
+}
+.stat-card-label{font-size:.78rem;color:var(--dim);margin-bottom:.35rem;font-weight:600}
+.stat-card-val{
+  font-family:var(--fh);font-size:1.9rem;font-weight:700;
+  letter-spacing:-.03em;line-height:1;margin-bottom:.3rem;
+}
+.stat-card-trend{font-size:.73rem;font-weight:600;display:flex;align-items:center;gap:.25rem}
+.stat-card-trend.up{color:#22c55e}
+.stat-card-trend.neutral{color:var(--dim)}
+.stat-card-sub{font-size:.73rem;color:var(--dim);margin-top:.15rem}
+
+/* Stats row (ancien layout, conservé pour compat) */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:.9rem;margin-bottom:1.4rem}
+
+/* Tables */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.84rem;font-family:var(--fb)}
+th{text-align:left;padding:.52rem .85rem;font-size:.67rem;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);border-bottom:1.5px solid var(--border);font-weight:bold;white-space:nowrap}
+td{padding:.65rem .85rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(10,10,18,.02)}
+
+/* Forms */
+.form-group{margin-bottom:1rem}
+.form-label{display:block;font-size:.79rem;font-weight:bold;margin-bottom:.28rem;color:var(--ink);font-family:var(--fb)}
+.form-input{
+  width:100%;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;
+  font-size:.88rem;font-family:var(--fb);color:var(--ink);background:#fff;
+  transition:border-color .2s;outline:none;
+}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,77,28,.08)}
+.form-hint{font-size:.72rem;color:var(--dim);margin-top:.2rem;font-family:var(--fb)}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:.32rem;
+  padding:.5rem 1.1rem;border-radius:8px;font-weight:bold;font-size:.84rem;
+  text-decoration:none;transition:all .18s;cursor:pointer;border:none;font-family:var(--fb);
+}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 10px rgba(255,77,28,.2)}
+.btn-primary:hover{background:#e03a10;transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,77,28,.3)}
+.btn-outline{background:transparent;color:var(--ink);border:1.5px solid var(--border)}
+.btn-outline:hover{background:var(--ink);color:#fff}
+.btn-sm{padding:.28rem .7rem;font-size:.76rem}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{background:#16a34a}
+
+/* Alerts */
+.alert{
+  padding:.88rem 1.1rem;border-radius:10px;font-size:.86rem;
+  margin-bottom:1rem;display:flex;align-items:flex-start;gap:.65rem;
+  line-height:1.5;font-family:var(--fb);
+}
+.alert-warning{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.alert-danger{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+
+/* Progress */
+.progress-wrap{background:var(--border);border-radius:100px;height:5px;overflow:hidden;margin:.32rem 0}
+.progress-bar{height:100%;border-radius:100px;transition:width .3s;background:var(--accent)}
+.progress-bar.pg-green{background:var(--green)}
+.progress-bar.pg-yellow{background:var(--gold)}
+
+/* Code */
+.code-block{
+  background:var(--ink);color:#a5f3fc;border-radius:9px;
+  padding:1.1rem;font-family:'Courier New',monospace;font-size:.79rem;
+  line-height:1.7;overflow-x:auto;white-space:pre;position:relative;
+}
+hr.divider{border:none;border-top:1px solid var(--border);margin:1.2rem 0}
+
+/* Flash */
+.flashes{position:fixed;top:1rem;right:1.4rem;z-index:300;display:flex;flex-direction:column;gap:.4rem;max-width:330px}
+.flash{
+  padding:.62rem .95rem;border-radius:8px;font-size:.83rem;font-weight:bold;
+  box-shadow:0 4px 18px rgba(0,0,0,.1);font-family:var(--fb);
+  animation:slideIn .28s ease;
+}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.flash.warning{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.flash.info{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+
+/* Overlay mobile */
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:49}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%);transition:transform .22s ease;z-index:100}
+  .sidebar.mobile-open{transform:none}
+  .sb-overlay.visible{display:block}
+  .main{margin-left:0}
+  .hamburger{display:flex;align-items:center;justify-content:center}
+  .content{padding:1rem}
+  .stat-cards{grid-template-columns:1fr 1fr}
+}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flashes">
+  {% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+
+  <!-- Logo -->
+  <div class="sb-header">
+    <div class="sb-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+        <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/>
+      </svg>
+    </div>
+    <a href="{{ logo_url() }}" class="sb-logo-text">Hotspot<span>Pro</span></a>
+  </div>
+
+  <!-- User block -->
+  <div class="sb-user-block">
+    <div class="sb-avatar">{{ session.get('full_name','?')[0].upper() }}</div>
+    <div class="sb-uinfo">
+      <div class="sb-uname">{{ session.get('full_name','') }}</div>
+      <div class="sb-uemail">{% if session.get('is_admin') %}Administrateur{% else %}Client{% endif %}</div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sb-nav">
+    {% if session.get('is_admin') %}
+    <div class="sb-section">
+      <div class="sb-section-label">Administration</div>
+      <a href="{{ url_for('admin_dashboard') }}" class="sb-item {% if request.endpoint=='admin_dashboard' %}active{% endif %}">
+        <span class="sb-icon">🏠</span><span class="sb-text">Tableau de bord</span>
+      </a>
+    </div>
+    {% else %}
+    <div class="sb-section">
+      <div class="sb-section-label">Mon espace</div>
+      <a href="{{ url_for('dashboard') }}" class="sb-item {% if request.endpoint=='dashboard' %}active{% endif %}">
+        <span class="sb-icon">📊</span><span class="sb-text">Tableau de bord</span>
+      </a>
+      <a href="{{ url_for('subscribe') }}?plan=1m" class="sb-item {% if request.endpoint=='subscribe' %}active{% endif %}">
+        <span class="sb-icon">💳</span><span class="sb-text">Abonnement</span>
+      </a>
+      <a href="{{ url_for('configure') }}" class="sb-item {% if request.endpoint=='configure' %}active{% endif %}">
+        <span class="sb-icon">⚙️</span><span class="sb-text">Configuration</span>
+      </a>
+      <a href="{{ url_for('mikrotik_script') }}" class="sb-item {% if request.endpoint=='mikrotik_script' %}active{% endif %}">
+        <span class="sb-icon">📋</span><span class="sb-text">Script MikroTik</span>
+      </a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Compte</div>
+      <a href="{{ url_for('account') }}" class="sb-item {% if request.endpoint=='account' %}active{% endif %}">
+        <span class="sb-icon">👤</span><span class="sb-text">Mon profil</span>
+      </a>
+    </div>
+    {% endif %}
+  </nav>
+
+  <!-- Footer -->
+  <div class="sb-footer">
+    <div class="sb-version">HotspotPro · Lomé, Togo</div>
+    <a href="{{ url_for('logout') }}" class="sb-logout">
+      <span>🚪</span> Déconnexion
+    </a>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="openSidebar()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div>
+        <div class="topbar-title">{% block topbar_title %}{% endblock %}</div>
+        <div class="topbar-subtitle">{% block topbar_subtitle %}{% endblock %}</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      {% block topbar_actions %}{% endblock %}
+      <div style="display:flex;align-items:center;gap:.6rem;margin-left:.4rem;padding-left:.8rem;border-left:1px solid var(--border)">
+        <div class="tb-user-info">
+          <div class="tb-uname">{{ session.get('full_name','').split()[0] if session.get('full_name') else '' }}</div>
+          <div class="tb-uemail">{% if session.get('is_admin') %}Admin{% else %}Client{% endif %}</div>
+        </div>
+        <div class="tb-avatar">{{ session.get('full_name','?')[0].upper() }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script>
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('mobile-open')
+  document.getElementById('sbOverlay').classList.add('visible')
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('mobile-open')
+  document.getElementById('sbOverlay').classList.remove('visible')
+}
+setTimeout(()=>{
+  document.querySelectorAll('.flash').forEach(el=>{
+    el.style.transition='opacity .4s,transform .4s'
+    el.style.opacity='0'
+    setTimeout(()=>el.remove(),400)
+  })
+},4500)
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

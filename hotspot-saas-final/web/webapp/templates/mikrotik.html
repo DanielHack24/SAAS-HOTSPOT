@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Script MikroTik — HotspotPro{% endblock %}
+{% block topbar_title %}Script MikroTik{% endblock %}
+
+{% block extra_head %}
+<style>
+.script-box {
+  background: #0a0a12;
+  color: #86efac;
+  border-radius: 12px;
+  padding: 1.4rem 1.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: .82rem;
+  line-height: 1.75;
+  word-break: break-all;
+  white-space: pre-wrap;
+  border: 1px solid rgba(255,255,255,.07);
+  position: relative;
+  user-select: all;
+}
+.step-row {
+  display: flex; gap: .9rem; align-items: flex-start;
+  padding: .9rem 0; border-bottom: 1px solid var(--border);
+}
+.step-row:last-child { border-bottom: none; }
+.step-num {
+  width: 28px; height: 28px; background: var(--accent); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: .8rem; flex-shrink: 0;
+}
+.step-num.ok { background: #22c55e; }
+.ci {
+  background: rgba(10,10,18,.08); padding: .08rem .4rem;
+  border-radius: 4px; font-family: monospace; font-size: .82rem;
+}
+.toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 500;
+  background: var(--ink); color: #fff; padding: .65rem 1.3rem; border-radius: 9px;
+  font-size: .85rem; font-weight: bold; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  transform: translateY(20px); opacity: 0;
+  transition: all .3s cubic-bezier(.4,0,.2,1); pointer-events: none;
+}
+.toast.show { transform: none; opacity: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:740px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <div class="alert alert-success">
+    ✅ <div>
+      <strong>Votre système est actif !</strong>
+      Copiez le script ci-dessous et collez-le dans le champ <strong>On Login</strong> de chaque profil MikroTik.
+    </div>
+  </div>
+
+  {% if 'VOTRE_IP_VPS' in oneliner or '800X' in oneliner %}
+  <div class="alert alert-warning">
+    ⚠️ <div><strong>IP ou port non configuré.</strong> Contactez l'administrateur pour définir <code>VPS_PUBLIC_IP</code>.</div>
+  </div>
+  {% endif %}
+
+  <!-- ══ SCRIPTS ON LOGIN PAR PROFIL ══ -->
+  {% if scripts_by_profile %}
+  <div class="alert alert-info">
+    ℹ️ <div style="font-size:.83rem;line-height:1.5">
+      Chaque profil a son propre script avec la bonne durée de validité.<br>
+      <strong>Copiez et collez le script correspondant dans chaque profil MikroTik.</strong>
+    </div>
+  </div>
+  {% for prof_name, prof_script in scripts_by_profile.items() %}
+  {% set prof_data = profiles.get(prof_name, {}) %}
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.3rem;border-bottom:1px solid var(--border);background:#f8f9ff">
+      <div>
+        <div style="font-weight:700;font-size:.93rem">📋 Profil : <span style="color:var(--accent)">{{ prof_name }}</span>
+          <span style="font-size:.75rem;color:var(--dim);font-weight:400;margin-left:.5rem">
+            — Validité : {{ prof_data.validity if prof_data.validity else '?' }}
+            &nbsp;·&nbsp; Prix : {{ "{:,}".format(prof_data.price if prof_data.price else 0).replace(",", " ") }} FCFA
+          </span>
+        </div>
+        <div style="font-size:.72rem;color:var(--dim);margin-top:.1rem">
+          IP → Hotspot → Server Profiles → <strong>{{ prof_name }}</strong> → Scripting → On Login
+        </div>
+      </div>
+      <button onclick="copyScript('script-{{ loop.index }}')" class="btn btn-primary btn-sm" id="copy-btn-{{ loop.index }}" style="flex-shrink:0;font-size:.8rem;padding:.4rem .9rem">
+        📋 Copier
+      </button>
+    </div>
+    <div style="padding:.9rem 1.3rem">
+      <textarea id="script-{{ loop.index }}" style="display:none;position:absolute;opacity:0;pointer-events:none" aria-hidden="true">{{ prof_script }}</textarea>
+      <div class="script-box" style="font-size:.75rem;line-height:1.6">{{ prof_script }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <!-- Fallback: script générique unique -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.3rem;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700;font-size:.93rem">📋 Script On Login — RouterOS</div>
+        <div style="font-size:.75rem;color:var(--dim);margin-top:.15rem">
+          À coller dans : <strong>IP → Hotspot → Server Profiles → [profil] → Scripting → On Login</strong>
+        </div>
+      </div>
+      <button onclick="copyScript('raw-script')" class="btn btn-primary" id="copy-btn" style="flex-shrink:0">
+        📋 Copier
+      </button>
+    </div>
+    <div style="padding:1.1rem 1.3rem">
+      <textarea id="raw-script" style="display:none;position:absolute;opacity:0;pointer-events:none" aria-hidden="true">{{ oneliner }}</textarea>
+      <div class="script-box">{{ oneliner }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══ INSTRUCTIONS ══ -->
+  <div class="card">
+    <div class="card-title">📘 Comment installer</div>
+    <div style="display:flex;flex-direction:column">
+
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div>
+          <strong style="font-size:.9rem">Copier le script</strong>
+          <p style="font-size:.83rem;color:var(--dim);margin:.25rem 0 0;line-height:1.6">
+            Cliquez sur <strong>📋 Copier</strong> ci-dessus.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div>
+          <strong style="font-size:.9rem">Coller dans chaque profil hotspot</strong>
+          <p style="font-size:.83rem;color:var(--dim);margin:.25rem 0 0;line-height:1.6">
+            Winbox → <strong>IP → Hotspot → Server Profiles</strong><br>
+            Ouvrez chaque profil (1h, 12h, 24h…) → onglet <strong>Scripting</strong><br>
+            Champ <strong>On Login</strong> → collez → cliquez <strong>OK</strong><br>
+            ⚠️ Répétez pour <strong>chaque profil</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div>
+          <strong style="font-size:.9rem">Format des usernames de tickets</strong>
+          <p style="font-size:.83rem;color:var(--dim);margin:.25rem 0 0;line-height:1.6">
+            Le username doit être au format <span class="ci">vendeur-suffixe</span><br>
+            Exemple : <span class="ci">daniel-ab12</span>, <span class="ci">marie-xk99</span><br>
+            La partie avant le <strong>premier tiret</strong> = nom du vendeur dans Telegram.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num ok">✓</div>
+        <div>
+          <strong style="font-size:.9rem">Tester que le serveur répond</strong>
+          <p style="font-size:.83rem;color:var(--dim);margin:.25rem 0 0;line-height:1.6">
+            Dans le terminal MikroTik (<strong>New Terminal</strong>) :
+          </p>
+          <div style="background:#0a0a12;color:#86efac;border-radius:8px;padding:.7rem 1rem;font-family:monospace;font-size:.78rem;margin-top:.5rem;word-break:break-all">
+            /tool fetch url="{{ health_url }}" mode=http
+          </div>
+          <p style="font-size:.78rem;color:var(--dim);margin-top:.4rem">Doit répondre : <span class="ci">status: ok</span></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ PROFILS CONFIGURÉS ══ -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;flex-wrap:wrap;gap:.5rem">
+      <div class="card-title" style="margin-bottom:0">💰 Vos profils hotspot</div>
+      <a href="{{ url_for('configure') }}?reconfigure=1" class="btn btn-outline btn-sm">✏️ Modifier les prix</a>
+    </div>
+    <p style="font-size:.81rem;color:var(--dim);margin-bottom:.9rem;line-height:1.5">
+      Ces profils doivent exister dans <strong>IP → Hotspot → User Profiles</strong> de votre MikroTik avec les mêmes noms exacts.
+      Le script enverra automatiquement le bon profil pour chaque ticket vendu.
+    </p>
+    {% if profiles %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.6rem">
+      {% for name, pdata in profiles.items() %}
+      {% set prix = pdata.price if pdata is mapping else pdata %}
+      {% set validite = pdata.validity if pdata is mapping else '' %}
+      <div style="background:#f8f9ff;border:1px solid var(--border);border-radius:10px;padding:.75rem;text-align:center">
+        <div style="font-family:var(--fh);font-weight:700;font-size:1rem;letter-spacing:-.02em">{{ name }}</div>
+        {% if validite %}
+        <div style="font-size:.68rem;color:var(--dim);margin-top:.1rem">{{ validite }}</div>
+        {% endif %}
+        <div style="font-size:.75rem;color:{% if prix > 0 %}#22c55e{% else %}var(--dim){% endif %};font-weight:{% if prix > 0 %}700{% else %}400{% endif %};margin-top:.15rem">
+          {% if prix > 0 %}{{ "{:,}".format(prix).replace(",", " ") }} FCFA{% else %}Non configuré{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:1.2rem;background:#f8f9ff;border-radius:10px;color:var(--dim);font-size:.84rem">
+      <div style="font-size:1.5rem;margin-bottom:.4rem">📭</div>
+      Aucun profil configuré —
+      <a href="{{ url_for('configure') }}?reconfigure=1" style="color:var(--accent);font-weight:600">configurer maintenant</a>
+    </div>
+    {% endif %}
+    <div style="margin-top:.8rem;padding:.7rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:.78rem;color:#92400e;line-height:1.5">
+      ⚠️ Si un ticket est vendu avec un profil <strong>non listé ici</strong>, le montant sera enregistré à <strong>0 FCFA</strong> dans vos stats. Ajoutez tous vos profils actifs.
+    </div>
+  </div>
+
+  <!-- ══ CONFIG ACTIVE ══ -->
+  <div class="card">
+    <div class="card-title">⚙️ Configuration active</div>
+    <div style="display:flex;flex-direction:column;gap:.45rem;font-size:.83rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#f8f6f0;border-radius:8px">
+        <span style="color:var(--dim);font-weight:600">📡 Routeur</span>
+        <strong>{{ sub.router_name or 'Routeur principal' }}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#f8f6f0;border-radius:8px">
+        <span style="color:var(--dim);font-weight:600">🌐 IP MikroTik</span>
+        <span style="font-family:monospace">{{ sub.mikrotik_ip or '—' }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#f8f6f0;border-radius:8px">
+        <span style="color:var(--dim);font-weight:600">🤖 Bot Telegram</span>
+        <span style="font-family:monospace;font-size:.79rem">{{ sub.bot_token[:24] if sub.bot_token else '—' }}…</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;background:#f8f6f0;border-radius:8px">
+        <span style="color:var(--dim);font-weight:600">🔗 URL Serveur</span>
+        <span style="font-family:monospace;font-size:.79rem">{{ health_url | replace('/health','') }}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">← Dashboard</a>
+      <a href="{{ url_for('configure') }}?reconfigure=1" class="btn btn-outline btn-sm">⚙️ Reconfigurer</a>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyScript(scriptId) {
+  const el = document.getElementById(scriptId)
+  if(!el) return
+  const txt = el.value
+  // Find the copy button near this textarea
+  const btnId = scriptId === 'raw-script' ? 'copy-btn' : 'copy-btn-' + scriptId.replace('script-','')
+  const btn = document.getElementById(btnId)
+  navigator.clipboard.writeText(txt).then(() => {
+    showToast('✅ Script ' + scriptId.replace('script-','#') + ' copié !')
+    if(btn) {
+      const orig = btn.innerHTML
+      btn.innerHTML = '✅ Copié !'
+      btn.style.background = '#22c55e'
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = '' }, 2500)
+    }
+  }).catch(() => {
+    el.style.display = 'block'; el.select(); document.execCommand('copy'); el.style.display = 'none'
+    showToast('✅ Script copié !')
+  })
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.classList.add('show')
+  setTimeout(() => t.classList.remove('show'), 3500)
+}
+</script>
+{% endblock %}

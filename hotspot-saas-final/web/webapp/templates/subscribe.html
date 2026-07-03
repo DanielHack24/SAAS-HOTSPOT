@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Abonnement — HotspotPro{% endblock %}
+{% block topbar_title %}Choisir un abonnement{% endblock %}
+{% block topbar_subtitle %}Paiement sécurisé via FedaPay — toute l'UEMOA{% endblock %}
+
+{% block extra_head %}
+<style>
+.plan-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: .8rem; }
+.plan-tile {
+  border: 2px solid var(--border); background: #fff; border-radius: 12px;
+  padding: 1.1rem; cursor: pointer; position: relative;
+  transition: all .18s; user-select: none;
+}
+.plan-tile:hover { border-color: rgba(255,77,28,.4); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(10,10,18,.08); }
+.plan-tile.selected { border-color: var(--accent); background: rgba(255,77,28,.03); box-shadow: 0 0 0 3px rgba(255,77,28,.1); }
+.plan-tile .pop-badge {
+  position: absolute; top: -10px; left: 12px;
+  background: var(--gold); color: var(--ink); font-size: .6rem; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 100px;
+}
+.plan-duration { font-size: .75rem; color: var(--dim); margin-bottom: .25rem; }
+.plan-price { font-family: var(--fh); font-weight: 800; font-size: 1.25rem; letter-spacing: -.03em; }
+.plan-check { position: absolute; top: .6rem; right: .8rem; font-size: 1rem; display: none; }
+.plan-tile.selected .plan-check { display: block; }
+
+/* Opérateurs */
+.operators-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px,1fr)); gap: .6rem; margin: .8rem 0; }
+.op-badge {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: .5rem .4rem; text-align: center;
+  font-size: .68rem; color: rgba(255,255,255,.55); font-weight: 600;
+}
+.op-flag { font-size: 1.1rem; display: block; margin-bottom: .2rem; }
+
+/* Bouton payer */
+.pay-btn {
+  width: 100%; padding: .85rem; border: none; border-radius: 11px; cursor: pointer;
+  font-family: var(--fb); font-size: 1rem; font-weight: 800;
+  background: linear-gradient(135deg, #ff4d1c, #ff7043);
+  color: #fff; box-shadow: 0 4px 20px rgba(255,77,28,.35);
+  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: .6rem;
+  letter-spacing: .01em;
+}
+.pay-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,77,28,.45); }
+.pay-btn:active { transform: translateY(0); }
+
+.security-badges { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-top: .7rem; }
+.sec-badge { display: flex; align-items: center; gap: .3rem; font-size: .72rem; color: var(--dim); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <!-- Header FedaPay -->
+  <div style="background:linear-gradient(135deg,#0f1535,#1a2a6c);border-radius:14px;padding:1.4rem 1.6rem;display:flex;align-items:center;gap:1rem">
+    <div style="font-size:2.2rem">🌍</div>
+    <div>
+      <div style="font-family:var(--fh);font-size:1.1rem;font-weight:700;font-style:italic;color:#fff;margin-bottom:.2rem">Paiement Mobile Money</div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.45);line-height:1.5">T-Money · Flooz · MTN · Moov · Orange · Wave · Free — toute l'UEMOA</div>
+    </div>
+    <div style="margin-left:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.4rem .8rem;font-size:.72rem;color:rgba(255,255,255,.6);font-weight:600;white-space:nowrap">
+      🔒 Sécurisé
+    </div>
+  </div>
+
+  <!-- Sélection plan -->
+  <div class="card">
+    <div class="card-title">📦 Choisissez votre plan</div>
+    <div class="plan-grid" id="planGrid">
+      {% for key, pl in plans.items() %}
+      <div class="plan-tile {% if key==plan %}selected{% endif %}"
+           data-plan="{{ key }}" data-price="{{ pl.price }}" data-label="{{ pl.label }}"
+           onclick="pickPlan(this)">
+        {% if key=='3m' %}<div class="pop-badge">⭐ Populaire</div>{% endif %}
+        {% if key=='12m' %}<div class="pop-badge" style="background:rgba(34,197,94,.2);color:#15803d">💎 Meilleur prix</div>{% endif %}
+        <div class="plan-check">✅</div>
+        <div class="plan-duration">{{ pl.label }}</div>
+        <div class="plan-price">
+          {{ "{:,}".format(pl.price).replace(",","&thinsp;")|safe }}
+          <span style="font-size:.72rem;font-weight:400;opacity:.5;font-family:var(--fb)"> FCFA</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Opérateurs disponibles -->
+  <div class="card" style="background:linear-gradient(135deg,#0f1535,#162048);border-color:transparent">
+    <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem">Opérateurs acceptés</div>
+    <div class="operators-grid">
+      <div class="op-badge"><span class="op-flag">🇹🇬</span>T-Money</div>
+      <div class="op-badge"><span class="op-flag">🇹🇬</span>Flooz</div>
+      <div class="op-badge"><span class="op-flag">🇧🇯</span>MTN</div>
+      <div class="op-badge"><span class="op-flag">🇧🇯</span>Moov</div>
+      <div class="op-badge"><span class="op-flag">🇨🇮</span>Orange</div>
+      <div class="op-badge"><span class="op-flag">🇸🇳</span>Wave</div>
+      <div class="op-badge"><span class="op-flag">🇸🇳</span>Free</div>
+      <div class="op-badge"><span class="op-flag">💳</span>Carte</div>
+    </div>
+  </div>
+
+  <!-- Récap + bouton payer -->
+  <div class="card">
+    <div class="card-title">💳 Récapitulatif</div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:#f8f9ff;border-radius:10px;margin-bottom:1.1rem">
+      <div>
+        <div style="font-size:.75rem;color:var(--dim);margin-bottom:.2rem">Plan sélectionné</div>
+        <div style="font-weight:700;color:var(--ink)" id="recap-label">{{ p.label }}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:.75rem;color:var(--dim);margin-bottom:.2rem">Montant</div>
+        <div style="font-family:var(--fh);font-size:1.5rem;font-weight:800;color:var(--accent)" id="recap-price">
+          {{ "{:,}".format(p.price).replace(",","&thinsp;")|safe }} FCFA
+        </div>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('subscribe_checkout') }}" id="checkoutForm">
+      {{ csrf_field() }}
+      <input type="hidden" name="plan" id="planInput" value="{{ plan }}">
+      <button type="submit" class="pay-btn" id="payBtn">
+        <span>🔐</span>
+        <span id="payBtnText">Payer {{ "{:,}".format(p.price).replace(","," ") }} FCFA avec FedaPay</span>
+      </button>
+    </form>
+
+    <div class="security-badges">
+      <div class="sec-badge">🔒 SSL chiffré</div>
+      <div class="sec-badge">·</div>
+      <div class="sec-badge">⚡ Activation instantanée</div>
+      <div class="sec-badge">·</div>
+      <div class="sec-badge">🌍 UEMOA</div>
+    </div>
+
+    <div style="text-align:center;margin-top:.8rem">
+      <a href="{{ url_for('dashboard') }}" style="font-size:.78rem;color:var(--dim);text-decoration:none">← Retour au dashboard</a>
+    </div>
+  </div>
+
+  <!-- Comment ça marche -->
+  <div class="card">
+    <div class="card-title">❓ Comment ça marche ?</div>
+    <div style="display:flex;flex-direction:column;gap:.7rem">
+      {% for icon, title, desc in [
+        ('1️⃣', 'Choisissez votre plan', 'Sélectionnez la durée qui vous convient.'),
+        ('2️⃣', 'Redirigé vers FedaPay', 'Vous êtes redirigé sur la page de paiement sécurisée FedaPay.'),
+        ('3️⃣', 'Payez par Mobile Money', 'Choisissez votre opérateur et payez depuis votre téléphone.'),
+        ('✅', 'Activation instantanée', 'Votre abonnement est activé automatiquement dès confirmation.')
+      ] %}
+      <div style="display:flex;gap:.8rem;align-items:flex-start">
+        <div style="font-size:1.2rem;flex-shrink:0;margin-top:.05rem">{{ icon }}</div>
+        <div>
+          <div style="font-size:.85rem;font-weight:700;margin-bottom:.1rem">{{ title }}</div>
+          <div style="font-size:.78rem;color:var(--dim);line-height:1.5">{{ desc }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const prices = { {% for k,p in plans.items() %}"{{k}}":{{p.price}},{% endfor %} }
+const labels = { {% for k,p in plans.items() %}"{{k}}":{{ p.label | tojson }},{% endfor %} }
+
+function pickPlan(el) {
+  document.querySelectorAll('.plan-tile').forEach(t => t.classList.remove('selected'))
+  el.classList.add('selected')
+  const plan  = el.dataset.plan
+  const price = parseInt(el.dataset.price)
+  const label = el.dataset.label
+  document.getElementById('planInput').value = plan
+  document.getElementById('recap-label').textContent = label
+  document.getElementById('recap-price').textContent = price.toLocaleString('fr-FR').replace(/\s/g,'\u202f') + ' FCFA'
+  document.getElementById('payBtnText').textContent = `Payer ${price.toLocaleString('fr-FR').replace(/\s/g,'\u202f')} FCFA avec FedaPay`
+}
+
+// Loader sur le bouton payer
+document.getElementById('checkoutForm').addEventListener('submit', function() {
+  const btn = document.getElementById('payBtn')
+  btn.disabled = true
+  btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></span> Redirection en cours…'
+})
+</script>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}

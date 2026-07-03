@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}Administration — HotspotPro{% endblock %}
+{% block topbar_title %}Tableau de bord administrateur{% endblock %}
+{% block topbar_actions %}
+  <span class="badge" style="background:rgba(245,166,35,.15);color:#92400e">👑 Admin</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-card-label">Total clients</div>
+    <div class="stat-card-val">{{ stats.total_clients }}</div>
+    <div class="stat-card-sub">Inscrits</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Abonnements actifs</div>
+    <div class="stat-card-val" style="color:var(--green)">{{ stats.active_subs }}</div>
+    <div class="stat-card-sub">En cours</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">En attente</div>
+    <div class="stat-card-val" style="color:var(--gold)">{{ stats.pending }}</div>
+    <div class="stat-card-sub">À confirmer</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Revenus confirmés</div>
+    <div class="stat-card-val" style="font-size:1.5rem">{{ "{:,}".format(stats.revenue).replace(",","&thinsp;")|safe }}</div>
+    <div class="stat-card-sub">FCFA</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">MikroTik en attente</div>
+    <div class="stat-card-val" style="color:#229ED9">{{ stats.mk_pending if stats.mk_pending is defined else 0 }}</div>
+    <div class="stat-card-sub">Routeurs à activer</div>
+  </div>
+</div>
+
+<!-- Paiements FedaPay en attente (abonnements) -->
+{% set pending_payments = payments | selectattr("status", "equalto", "pending") | list %}
+{% if pending_payments %}
+<div class="card" style="margin-bottom:1.2rem;border-color:var(--gold)">
+  <div class="card-title" style="color:#92400e">⏳ Paiements FedaPay en attente ({{ pending_payments|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Réf. FedaPay</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for p in pending_payments %}
+        <tr>
+          <td><strong>{{ p.full_name }}</strong><br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
+          <td><span class="badge badge-blue">{{ plans[p.plan].label }}</span></td>
+          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td><span class="badge badge-green">{{ p.method|upper }}</span></td>
+          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference }}</td>
+          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('confirm_payment', pid=p.id) }}" style="display:inline">
+      {{ csrf_field() }}
+              <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Confirmer ce paiement FedaPay ?')">✅ Confirmer</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Paiements MikroTik FedaPay en attente -->
+{% if mk_payments is defined %}
+{% set mk_pending = mk_payments | selectattr("status", "equalto", "pending") | list %}
+{% if mk_pending %}
+<div class="card" style="margin-bottom:1.2rem;border-color:#229ED9">
+  <div class="card-title" style="color:#1a5276">📡 Routeurs supplémentaires — en attente ({{ mk_pending|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Routeur</th><th>IP</th><th>Plan</th><th>Montant</th><th>Réf. FedaPay</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for p in mk_pending %}
+        <tr>
+          <td><strong>{{ p.full_name }}</strong><br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
+          <td style="font-size:.84rem">{{ p.device_label or '—' }}</td>
+          <td style="font-family:monospace;font-size:.8rem;color:var(--dim)">{{ p.device_ip or '—' }}</td>
+          <td><span class="badge badge-blue">{{ plans[p.plan].label if p.plan in plans else p.plan }}</span></td>
+          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference }}</td>
+          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('confirm_mikrotik_payment', pid=p.id) }}" style="display:inline">
+      {{ csrf_field() }}
+              <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Activer ce routeur ?')">✅ Activer</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Abonnements -->
+<div class="card" style="margin-bottom:1.2rem">
+  <div class="card-title">📡 Abonnements ({{ subs|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Plan</th><th>Expire le</th><th>Déployé</th><th>Statut</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for s in subs %}
+        <tr>
+          <td><strong>{{ s.full_name }}</strong><br><span style="font-size:.75rem;color:var(--dim)">{{ s.email }}</span></td>
+          <td><span class="badge badge-blue">{{ plans[s.plan].label }}</span></td>
+          <td style="font-size:.83rem">{{ s.end_date[:10] }}</td>
+          <td>{% if s.provisioned %}<span class="badge badge-green">● Oui</span>{% else %}<span class="badge badge-gray">○ Non</span>{% endif %}</td>
+          <td>{% if s.active %}<span class="badge badge-green">Actif</span>{% else %}<span class="badge badge-red">Inactif</span>{% endif %}</td>
+          <td>
+            <form method="POST" action="{{ url_for('toggle_sub', sid=s.id) }}">
+      {{ csrf_field() }}
+              <button type="submit" class="btn btn-sm {% if s.active %}btn-danger{% else %}btn-success{% endif %}">
+                {% if s.active %}⏹ Couper{% else %}▶ Activer{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--dim);padding:1.5rem">Aucun abonnement.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Historique paiements -->
+<div class="card" style="margin-bottom:1.2rem">
+  <div class="card-title">💰 Historique des paiements</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Réf. FedaPay</th><th>Statut</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td>{{ p.full_name }}<br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
+          <td>{{ plans[p.plan].label }}</td>
+          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td><span class="badge badge-gray">{{ p.method|upper }}</span></td>
+          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference or '—' }}</td>
+          <td>
+            {% if p.status=='confirmed' %}<span class="badge badge-green">✅ Confirmé</span>
+            {% elif p.status=='pending' %}<span class="badge badge-yellow">⏳ Attente</span>
+            {% else %}<span class="badge badge-red">✗ Rejeté</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">Aucun paiement.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Historique MikroTik -->
+{% if mk_payments is defined %}
+<div class="card" style="margin-bottom:1.2rem">
+  <div class="card-title">📡 Historique routeurs supplémentaires</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Routeur</th><th>IP</th><th>Montant</th><th>Réf. FedaPay</th><th>Statut</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for p in mk_payments %}
+        <tr>
+          <td>{{ p.full_name }}<br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
+          <td style="font-size:.84rem">{{ p.device_label or '—' }}</td>
+          <td style="font-family:monospace;font-size:.8rem;color:var(--dim)">{{ p.device_ip or '—' }}</td>
+          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference or '—' }}</td>
+          <td>
+            {% if p.status=='confirmed' %}<span class="badge badge-green">✅ Activé</span>
+            {% elif p.status=='pending' %}<span class="badge badge-yellow">⏳ Attente</span>
+            {% else %}<span class="badge badge-red">✗ Rejeté</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">Aucun paiement MikroTik.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Clients -->
+<div class="card" style="margin-bottom:1.2rem">
+  <div class="card-title">👥 Clients inscrits</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Inscrit le</th></tr></thead>
+      <tbody>
+        {% for c in clients %}{% if not c.is_admin %}
+        <tr>
+          <td><strong>{{ c.full_name }}</strong></td>
+          <td style="font-size:.84rem">{{ c.email }}</td>
+          <td style="font-size:.84rem;color:var(--dim)">{{ c.phone or '—' }}</td>
+          <td style="font-size:.78rem;color:var(--dim)">{{ c.created_at[:10] }}</td>
+        </tr>
+        {% endif %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Changer MDP admin -->
+<div class="card" style="max-width:420px">
+  <div class="card-title">🔒 Changer le mot de passe admin</div>
+  <form method="POST" action="{{ url_for('admin_change_password') }}">
+      {{ csrf_field() }}
+    <div class="form-group">
+      <label class="form-label">Nouveau mot de passe</label>
+      <input class="form-input" type="password" name="new_password" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirmer</label>
+      <input class="form-input" type="password" name="new_password2" required placeholder="••••••••">
+    </div>
+    <button type="submit" class="btn btn-outline btn-sm">Changer le mot de passe</button>
+  </form>
+</div>
+
+{% endblock %}

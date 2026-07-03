@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Mon compte — HotspotPro{% endblock %}
+{% block topbar_title %}Mon compte{% endblock %}
+
+{% block content %}
+<div style="max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <!-- Profil -->
+  <div class="card">
+    <div class="card-title">👤 Informations personnelles</div>
+    <form method="POST">
+      {{ csrf_field() }}
+      <input type="hidden" name="action" value="update_profile">
+      <div class="form-group">
+        <label class="form-label">Nom complet</label>
+        <input class="form-input" type="text" name="full_name"
+               value="{{ client.full_name }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email <span style="color:var(--dim);font-weight:400">(non modifiable)</span></label>
+        <input class="form-input" type="email" value="{{ client.email }}" disabled
+               style="background:#f8f6f0;color:var(--dim);cursor:not-allowed">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Téléphone</label>
+        <input class="form-input" type="tel" name="phone"
+               value="{{ client.phone or '' }}" placeholder="90 00 00 00">
+      </div>
+      <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+    </form>
+  </div>
+
+  <!-- Mot de passe -->
+  <div class="card">
+    <div class="card-title">🔒 Changer le mot de passe</div>
+    <form method="POST">
+      {{ csrf_field() }}
+      <input type="hidden" name="action" value="change_password">
+      <div class="form-group">
+        <label class="form-label">Mot de passe actuel</label>
+        <input class="form-input" type="password" name="old_password" required placeholder="••••••••">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+        <div class="form-group">
+          <label class="form-label">Nouveau mot de passe</label>
+          <input class="form-input" type="password" name="new_password" required
+                 placeholder="••••••••" minlength="6">
+          <div class="form-hint">Minimum 6 caractères</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmer</label>
+          <input class="form-input" type="password" name="new_password2" required placeholder="••••••••">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-outline">Changer le mot de passe</button>
+    </form>
+  </div>
+
+  <!-- Historique paiements -->
+  <div class="card">
+    <div class="card-title">💰 Historique de mes paiements</div>
+    {% if payments %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Plan</th><th>Montant</th><th>Méthode</th><th>Réf. FedaPay</th><th>Statut</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td>{{ plans[p.plan].label }}</td>
+            <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+            <td><span class="badge badge-gray">{{ p.method|upper }}</span></td>
+            <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ p.reference or '—' }}
+            </td>
+            <td>
+              {% if p.status == 'confirmed' %}<span class="badge badge-green">✅ Confirmé</span>
+              {% elif p.status == 'pending' %}<span class="badge badge-yellow">⏳ En attente</span>
+              {% else %}<span class="badge badge-red">✗ Rejeté</span>{% endif %}
+            </td>
+            <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:10] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="font-size:.87rem;color:var(--dim);padding:.5rem 0">Aucun paiement enregistré.</p>
+    {% endif %}
+  </div>
+
+  <!-- Infos compte -->
+  <div style="font-size:.78rem;color:var(--dim);padding:.3rem .5rem;line-height:1.7">
+    Membre depuis le {{ client.created_at[:10] }} &nbsp;·&nbsp;
+    <a href="{{ url_for('logout') }}" style="color:var(--accent);text-decoration:none;font-weight:600">Déconnexion</a>
+  </div>
+
+</div>
+{% endblock %}

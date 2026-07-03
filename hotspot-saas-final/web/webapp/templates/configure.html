@@ -1,0 +1,629 @@
+{% extends "base.html" %}
+{% block title %}Configuration — HotspotPro{% endblock %}
+{% block topbar_title %}Configuration{% endblock %}
+{% block topbar_subtitle %}Connectez votre MikroTik au système{% endblock %}
+
+{% block extra_head %}
+<style>
+.cfg-wrap { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.1rem; }
+
+/* Stepper */
+.stepper {
+  display: flex; background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(10,10,18,.04);
+}
+.step-tab {
+  flex: 1; padding: .8rem .5rem; text-align: center;
+  font-size: .75rem; font-weight: bold; color: var(--dim);
+  border-right: 1px solid var(--border); transition: all .2s; user-select: none;
+}
+.step-tab:last-child { border-right: none; }
+.step-tab.active { color: var(--accent); background: rgba(255,77,28,.04); }
+.step-tab.done { color: var(--green); }
+.step-tab .sn {
+  width: 22px; height: 22px; border-radius: 50%; margin: 0 auto .3rem;
+  background: #f0f4ff; color: var(--dim); font-size: .72rem; font-weight: bold;
+  display: flex; align-items: center; justify-content: center; transition: all .25s;
+}
+.step-tab.active .sn { background: var(--accent); color: #fff; }
+.step-tab.done .sn { background: var(--green); color: #fff; }
+
+/* Steps */
+.cfg-step { display: none; flex-direction: column; gap: .9rem; }
+.cfg-step.active { display: flex; animation: stepIn .3s ease; }
+@keyframes stepIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* Nav buttons */
+.cfg-nav { display: flex; gap: .6rem; justify-content: space-between; margin-top: .4rem; }
+.btn-next, .btn-prev {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .55rem 1.3rem; border-radius: 8px; font-weight: bold; font-size: .88rem;
+  cursor: pointer; font-family: var(--fb); transition: all .18s; border: none;
+}
+.btn-next { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(255,77,28,.2); }
+.btn-next:hover { background: #e03a10; }
+.btn-next:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.btn-prev { background: transparent; color: var(--dim); border: 1.5px solid var(--border); }
+.btn-prev:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* Token badge */
+.token-badge {
+  display: none; align-items: center; gap: .5rem;
+  padding: .55rem .9rem; border-radius: 8px; font-size: .82rem; font-weight: bold;
+}
+.token-badge.show { display: inline-flex; }
+.token-badge.ok  { background: rgba(34,197,94,.1); color: #15803d; border: 1px solid rgba(34,197,94,.25); }
+.token-badge.err { background: rgba(239,68,68,.08); color: #991b1b; border: 1px solid rgba(239,68,68,.2); }
+.token-badge.loading { background: rgba(59,130,246,.08); color: #1e40af; border: 1px solid rgba(59,130,246,.2); }
+
+/* Input status */
+.input-wrap { position: relative; }
+.input-wrap .form-input { padding-right: 2.8rem; }
+.input-status { position: absolute; right: .8rem; top: 50%; transform: translateY(-50%); font-size: 1rem; opacity: 0; transition: opacity .2s; }
+.input-status.show { opacity: 1; }
+
+/* Detect btn */
+.detect-btn {
+  display: inline-flex; align-items: center; gap: .4rem; padding: .6rem 1.2rem;
+  border-radius: 8px; background: rgba(255,77,28,.08); color: var(--accent);
+  border: 1.5px solid rgba(255,77,28,.25); font-size: .84rem; font-weight: bold;
+  cursor: pointer; font-family: var(--fb); transition: all .2s;
+}
+.detect-btn:hover { background: rgba(255,77,28,.15); }
+.detect-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Chatid result */
+.chatid-result {
+  display: none; align-items: center; gap: .75rem;
+  padding: .9rem 1.1rem; background: rgba(34,197,94,.07);
+  border: 1.5px solid rgba(34,197,94,.25); border-radius: 9px;
+}
+.chatid-result.show { display: flex; animation: stepIn .3s ease; }
+
+/* Summary */
+.deploy-summary { background: #f8f9ff; border-radius: 10px; padding: 1.1rem; display: flex; flex-direction: column; gap: .55rem; }
+.sum-row { display: flex; justify-content: space-between; align-items: center; font-size: .84rem; }
+.sum-row span:first-child { color: var(--dim); font-weight: 600; }
+.sum-val { font-family: monospace; color: var(--ink); font-weight: bold; font-size: .82rem; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Profiles */
+.profiles-grid { display: flex; flex-direction: column; gap: .5rem; }
+.profile-header { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: .5rem; }
+.profile-header span { font-size: .72rem; font-weight: bold; color: var(--dim); padding: 0 .3rem; }
+
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Alerte /start très visible */
+.start-alert {
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  border: 2px solid #f59e0b; border-radius: 12px;
+  padding: 1.1rem 1.2rem; display: flex; gap: .9rem; align-items: flex-start;
+}
+.start-alert-icon { font-size: 1.8rem; flex-shrink: 0; margin-top: .1rem; }
+.start-alert-body { flex: 1; }
+.start-alert-title { font-weight: 800; color: #92400e; font-size: .95rem; margin-bottom: .35rem; }
+.start-alert-text { font-size: .84rem; color: #78350f; line-height: 1.6; }
+.start-alert-code { display: inline-block; background: #92400e; color: #fff; font-family: monospace; font-size: .9rem; font-weight: bold; padding: .15rem .55rem; border-radius: 5px; margin: 0 .15rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cfg-wrap">
+
+{% if sub and sub.provisioned %}
+<!-- ══ DÉJÀ CONFIGURÉ ══ -->
+<div class="alert alert-success">
+  ✅ <div><strong>Votre système est déjà déployé.</strong> Tout fonctionne correctement.</div>
+</div>
+<div class="card">
+  <div class="card-title">⚙️ Configuration actuelle</div>
+  <div style="display:flex;flex-direction:column;gap:.6rem;font-size:.84rem">
+    <div style="display:flex;justify-content:space-between;padding:.65rem;background:#f8f9ff;border-radius:8px">
+      <span style="color:var(--dim);font-weight:600">📡 Nom du routeur</span>
+      <strong>{{ sub.router_name or 'Routeur principal' }}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:.65rem;background:#f8f9ff;border-radius:8px">
+      <span style="color:var(--dim);font-weight:600">🌐 IP MikroTik</span>
+      <span style="font-family:monospace">{{ sub.mikrotik_ip or '—' }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:.65rem;background:#f8f9ff;border-radius:8px">
+      <span style="color:var(--dim);font-weight:600">🤖 Bot Token</span>
+      <span style="font-family:monospace;font-size:.8rem">{{ sub.bot_token[:24] if sub.bot_token else '—' }}…</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:.65rem;background:#f8f9ff;border-radius:8px">
+      <span style="color:var(--dim);font-weight:600">💬 Chat ID</span>
+      <span style="font-family:monospace">{{ sub.chat_id or '—' }}</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:.65rem;margin-top:1.1rem;flex-wrap:wrap">
+    <a href="{{ url_for('mikrotik_script') }}" class="btn btn-primary">📋 Voir mon script →</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Dashboard</a>
+  </div>
+</div>
+
+<details>
+  <summary style="cursor:pointer;font-size:.84rem;color:var(--dim);padding:.5rem;font-family:var(--fb)">⚙️ Modifier la configuration</summary>
+  <div style="margin-top:.8rem">
+{% endif %}
+
+{% if not sub or not sub.provisioned %}
+<!-- Stepper -->
+<div class="stepper">
+  <div class="step-tab active" id="stab0">
+    <div class="sn" id="snum0">1</div>
+    <span>Bot Telegram</span>
+  </div>
+  <div class="step-tab" id="stab1">
+    <div class="sn" id="snum1">2</div>
+    <span>Chat ID</span>
+  </div>
+  <div class="step-tab" id="stab2">
+    <div class="sn" id="snum2">3</div>
+    <span>MikroTik</span>
+  </div>
+  <div class="step-tab" id="stab3">
+    <div class="sn" id="snum3">4</div>
+    <span>Profils</span>
+  </div>
+  <div class="step-tab" id="stab4">
+    <div class="sn" id="snum4">5</div>
+    <span>Déployer</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- Formulaire de configuration (fallback + mode édition) -->
+<div id="manual_form_section" {% if not sub or not sub.provisioned %}style="display:none"{% endif %}>
+  <div class="card" style="border:1.5px dashed var(--border)">
+    <div class="card-title">📝 {% if sub and sub.provisioned %}Modifier{% else %}Configurer{% endif %}</div>
+    <form method="POST" action="{{ url_for('configure') }}">
+      {{ csrf_field() }}
+      <div class="form-group">
+        <label class="form-label">Nom du routeur</label>
+        <input class="form-input" type="text" name="router_name"
+               value="{{ sub.router_name if sub and sub.router_name else '' }}"
+               placeholder="Ex : Cyber Café Centre, Boutique Kodjo…">
+        <div class="form-hint">Ce nom s'affichera dans vos notifications Telegram</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Token du Bot Telegram</label>
+        <input class="form-input" type="text" name="bot_token"
+               value="{{ sub.bot_token if sub and sub.bot_token else '' }}"
+               placeholder="123456789:AAGQ39db2cu…" style="font-family:monospace;font-size:.84rem" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Chat ID Telegram</label>
+        <input class="form-input" type="text" name="chat_id"
+               value="{{ sub.chat_id if sub and sub.chat_id else '' }}"
+               placeholder="Ex: 6077652948" style="font-family:monospace;font-size:.84rem" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">IP publique du MikroTik</label>
+        <input class="form-input" type="text" name="mikrotik_ip"
+               value="{{ sub.mikrotik_ip if sub and sub.mikrotik_ip else '' }}"
+               placeholder="Ex: 41.82.115.200" style="font-family:monospace;font-size:.84rem" required>
+      </div>
+      <input type="hidden" name="profiles_json" id="manual_profiles_json" value='{"1h":{"validity":"1h","price":100},"12h":{"validity":"12h","price":500},"24h":{"validity":"24h","price":1000},"3j":{"validity":"3d","price":2500},"7j":{"validity":"7d","price":5000},"30j":{"validity":"30d","price":15000}}'>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.4rem">
+        🚀 {% if sub and sub.provisioned %}Mettre à jour{% else %}Déployer{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if not sub or not sub.provisioned %}
+
+<!-- ══ ÉTAPE 1 : Bot Token ══ -->
+<div class="cfg-step active card" id="step0">
+  <div class="card-title">🤖 Token de votre bot Telegram</div>
+  <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:.5rem">
+    <div style="display:flex;gap:.65rem;align-items:flex-start;padding:.75rem;background:#f8f9ff;border-radius:9px">
+      <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+      <div style="font-size:.84rem;color:var(--dim);line-height:1.6">Sur Telegram, cherchez <strong style="color:var(--ink)">@BotFather</strong> et tapez <code style="background:rgba(10,10,18,.07);padding:.05rem .35rem;border-radius:4px;font-family:monospace">/newbot</code></div>
+    </div>
+    <div style="display:flex;gap:.65rem;align-items:flex-start;padding:.75rem;background:#f8f9ff;border-radius:9px">
+      <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+      <div style="font-size:.84rem;color:var(--dim);line-height:1.6">Copiez le <strong style="color:var(--ink)">token</strong> fourni (ex: <code style="background:rgba(10,10,18,.07);padding:.05rem .35rem;border-radius:4px;font-family:monospace">123456789:AAGQ…</code>)</div>
+    </div>
+  </div>
+  <div class="form-group" style="margin-bottom:.5rem">
+    <label class="form-label">Token du Bot Telegram</label>
+    <div class="input-wrap">
+      <input class="form-input" type="text" id="bot_token_input"
+             placeholder="123456789:AAGQ39db2cu_n-iD…"
+             style="font-family:monospace;font-size:.84rem"
+             oninput="onTokenInput(this.value)">
+      <span class="input-status" id="token_status_icon"></span>
+    </div>
+    <div style="margin-top:.5rem"><div class="token-badge" id="token_badge"></div></div>
+    <div class="form-hint">Fourni par @BotFather · validé automatiquement</div>
+  </div>
+  <div class="cfg-nav">
+    <div></div><!-- spacer -->
+    <button class="btn-next" id="btn_next0" onclick="goStep(1)" disabled>Suivant →</button>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 2 : Chat ID ══ -->
+<div class="cfg-step card" id="step1">
+  <div class="card-title">💬 Détection de votre Chat ID</div>
+
+  <!-- Alerte /start très visible -->
+  <div class="start-alert">
+    <div class="start-alert-icon">⚠️</div>
+    <div class="start-alert-body">
+      <div class="start-alert-title">Action obligatoire avant de continuer</div>
+      <div class="start-alert-text">
+        Vous devez impérativement envoyer <span class="start-alert-code">/start</span> à votre bot Telegram
+        <strong id="bot_name_display"></strong> avant de détecter votre Chat ID.<br><br>
+        <strong>Sans cette action, le système ne pourra pas fonctionner et vous ne recevrez aucune notification de vente.</strong>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:.6rem">
+    <div style="display:flex;gap:.65rem;align-items:flex-start;padding:.75rem;background:#f8f9ff;border-radius:9px">
+      <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+      <div style="font-size:.84rem;color:var(--dim);line-height:1.6">Ouvrez Telegram → cherchez votre bot <strong id="bot_username_display" style="color:var(--accent)"></strong> → envoyez <code style="background:rgba(10,10,18,.07);padding:.05rem .35rem;border-radius:4px;font-family:monospace">/start</code></div>
+    </div>
+    <div style="display:flex;gap:.65rem;align-items:flex-start;padding:.75rem;background:#f8f9ff;border-radius:9px">
+      <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+      <div style="font-size:.84rem;color:var(--dim);line-height:1.6">Revenez ici et cliquez sur <strong style="color:var(--ink)">Détecter mon Chat ID</strong></div>
+    </div>
+  </div>
+
+  <button class="detect-btn" id="btn_detect" onclick="detectChatId()" style="align-self:flex-start">
+    <span id="detect_icon">🔍</span> Détecter mon Chat ID
+  </button>
+
+  <div class="chatid-result" id="chatid_result">
+    <div>
+      <div style="font-size:.72rem;color:var(--dim);margin-bottom:.15rem">✅ Chat ID détecté</div>
+      <div style="font-family:monospace;font-size:1.15rem;font-weight:bold" id="chatid_display">—</div>
+    </div>
+    <button style="margin-left:auto;font-size:.75rem;font-weight:bold;background:none;border:1px solid var(--border);padding:.25rem .65rem;border-radius:6px;cursor:pointer" onclick="copyChatId()">Copier</button>
+  </div>
+
+  <details style="margin-top:-.2rem">
+    <summary style="font-size:.8rem;color:var(--dim);cursor:pointer;font-family:var(--fb)">Entrer manuellement</summary>
+    <div class="form-group" style="margin-top:.7rem;margin-bottom:0">
+      <div class="input-wrap">
+        <input class="form-input" type="text" id="chat_id_manual"
+               placeholder="Ex: 6077652948" style="font-family:monospace;font-size:.84rem"
+               oninput="onManualChatId(this.value)">
+        <span class="input-status" id="chatid_status_icon"></span>
+      </div>
+      <div class="form-hint">Obtenu via @userinfobot sur Telegram</div>
+    </div>
+  </details>
+
+  <div class="cfg-nav">
+    <button class="btn-prev" onclick="goStep(0)">← Retour</button>
+    <button class="btn-next" id="btn_next1" onclick="goStep(2)" disabled>Suivant →</button>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 3 : MikroTik ══ -->
+<div class="cfg-step card" id="step2">
+  <div class="card-title">🌐 Votre routeur MikroTik</div>
+
+  <div class="form-group" style="margin-bottom:.5rem">
+    <label class="form-label">Nom du routeur</label>
+    <input class="form-input" type="text" id="router_name_input"
+           placeholder="Ex : Cyber Café Centre, Boutique Kodjo…"
+           oninput="onRouterNameInput(this.value)">
+    <div class="form-hint">Ce nom apparaîtra dans chaque notification Telegram pour identifier votre point de vente</div>
+  </div>
+
+  <div class="form-group" style="margin-bottom:.5rem">
+    <label class="form-label">IP publique du MikroTik</label>
+    <div class="input-wrap">
+      <input class="form-input" type="text" id="mikrotik_ip_input"
+             placeholder="Ex : 41.82.115.200" style="font-family:monospace;font-size:.84rem"
+             oninput="onIpInput(this.value)">
+      <span class="input-status" id="ip_status_icon"></span>
+    </div>
+    <div class="form-hint">Adresse IP WAN de votre routeur — sera autorisée en whitelist</div>
+  </div>
+
+  <div id="ip_info" style="display:none;align-items:center;gap:.65rem;padding:.7rem 1rem;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);border-radius:8px;font-size:.84rem;color:#1e40af">
+    🔒 Cette IP sera la seule autorisée à communiquer avec votre API HotspotPro.
+  </div>
+
+  <div class="cfg-nav">
+    <button class="btn-prev" onclick="goStep(1)">← Retour</button>
+    <button class="btn-next" id="btn_next2" onclick="goStep(3)" disabled>Suivant →</button>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 4 : Profils hotspot ══ -->
+<div class="cfg-step card" id="step3">
+  <div class="card-title">💰 Vos profils et tarifs hotspot</div>
+  <div class="alert alert-info" style="margin-bottom:.3rem">
+    ℹ️ <div style="font-size:.83rem;line-height:1.5">
+      Ces profils seront <strong>récupérés automatiquement</strong> depuis votre MikroTik.
+      Renseignez ici le <strong>prix de vente</strong> de chacun pour que vos stats soient correctes.
+      Vous pouvez modifier ces tarifs à tout moment.
+    </div>
+  </div>
+
+  <div class="profile-header" style="padding:0 .3rem">
+    <span>Nom du profil</span>
+    <span>Validité</span>
+    <span>Prix de vente</span>
+    <span></span>
+  </div>
+  <div class="profiles-grid" id="profiles_list"></div>
+
+  <button type="button" id="btn_add_profile" onclick="addProfile()"
+    style="display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border-radius:8px;border:1.5px dashed var(--border);background:transparent;color:var(--dim);font-size:.82rem;font-weight:bold;cursor:pointer;transition:all .18s;font-family:var(--fb)"
+    onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--dim)'">
+    + Ajouter un profil
+  </button>
+
+  <div class="cfg-nav">
+    <button class="btn-prev" onclick="goStep(2)">← Retour</button>
+    <button class="btn-next" id="btn_next3" onclick="goStep(4)" disabled>Suivant →</button>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 5 : Déployer ══ -->
+<div class="cfg-step card" id="step4">
+  <div class="card-title">🚀 Vérification finale</div>
+
+  <div class="deploy-summary" id="deploy_summary">
+    <div class="sum-row"><span>📡 Routeur</span><span class="sum-val" id="sum_router">—</span></div>
+    <div class="sum-row"><span>🤖 Bot Token</span><span class="sum-val" id="sum_token">—</span></div>
+    <div class="sum-row"><span>💬 Chat ID</span><span class="sum-val" id="sum_chatid">—</span></div>
+    <div class="sum-row"><span>🌐 IP MikroTik</span><span class="sum-val" id="sum_ip">—</span></div>
+    <div class="sum-row"><span>💰 Profils</span><span class="sum-val" id="sum_prices">—</span></div>
+  </div>
+
+  <div class="alert alert-info">
+    🔒 <div style="font-size:.83rem;line-height:1.5">
+      Votre bot, votre base de données et vos services tournent dans un environnement <strong>isolé et chiffré</strong>.
+    </div>
+  </div>
+
+  <form method="POST" id="deploy_form" action="{{ url_for('configure') }}">
+      {{ csrf_field() }}
+    <input type="hidden" name="router_name" id="f_router_name">
+    <input type="hidden" name="bot_token" id="f_bot_token">
+    <input type="hidden" name="chat_id" id="f_chat_id">
+    <input type="hidden" name="mikrotik_ip" id="f_mikrotik_ip">
+    <div id="f_profiles_container"></div>
+    <div class="cfg-nav">
+      <button type="button" class="btn-prev" onclick="goStep(3)">← Retour</button>
+      <button type="submit" class="btn-next" onclick="prepareSubmit()">🚀 Déployer mon système</button>
+    </div>
+  </form>
+</div>
+
+{% endif %}
+
+<div class="alert alert-info">
+  🛡️ <div style="font-size:.82rem;line-height:1.5">
+    <strong>Multi-routeur :</strong> Un seul bot Telegram peut gérer plusieurs routeurs. Chaque notification inclut le nom du routeur pour identifier la vente.
+  </div>
+</div>
+
+{% if sub and sub.provisioned %}
+  </div>
+</details>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const state = { token:'', tokenValid:false, botName:'', botUsername:'', chatId:'', chatIdValid:false, ip:'', ipValid:false, routerName:'' }
+
+// ── STEPPER ──
+const tabs  = document.querySelectorAll('.step-tab')
+const steps = document.querySelectorAll('.cfg-step')
+
+function goStep(n) {
+  if(n > 0 && !state.tokenValid) return
+  if(n > 1 && !state.chatIdValid) return
+  if(n > 2 && !state.ipValid && state.ip !== '') return
+  if(n === 4) updateSummary()
+  tabs.forEach((t,i) => t.classList.toggle('active', i===n))
+  steps.forEach((s,i) => s.classList.toggle('active', i===n))
+}
+function markDone(i) {
+  if(tabs[i]) tabs[i].classList.add('done')
+  const sn = document.getElementById('snum'+i)
+  if(sn) sn.textContent = '✓'
+}
+function showManual() {
+  const m = document.getElementById('manual_form_section')
+  if(m) { m.style.display='block'; m.scrollIntoView({behavior:'smooth'}) }
+}
+
+// ── TOKEN ──
+let tokenTimer = null
+function onTokenInput(val) {
+  clearTimeout(tokenTimer)
+  state.token = val.trim(); state.tokenValid = false
+  const btn = document.getElementById('btn_next0')
+  if(btn) btn.disabled = true
+  setTokenBadge('','')
+  if(!state.token) return
+  if(!/^\d+:[A-Za-z0-9_\-]{35,}$/.test(state.token)) { setTokenBadge('err','✗ Format invalide'); return }
+  setTokenBadge('loading','<span class="spin"></span> Vérification...')
+  tokenTimer = setTimeout(validateToken, 700)
+}
+async function validateToken() {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${state.token}/getMe`)
+    const d = await r.json()
+    if(d.ok) {
+      state.tokenValid = true; state.botUsername = d.result.username; state.botName = d.result.first_name
+      setTokenBadge('ok', `✓ @${state.botUsername} — prêt`)
+      const btn = document.getElementById('btn_next0'); if(btn) btn.disabled = false
+      // Afficher le nom du bot dans l'étape 2
+      const dn = document.getElementById('bot_name_display')
+      const du = document.getElementById('bot_username_display')
+      if(dn) dn.textContent = ` (@${state.botUsername})`
+      if(du) du.textContent = `@${state.botUsername}`
+      markDone(0)
+    } else { setTokenBadge('err','✗ Token invalide') }
+  } catch(e) { setTokenBadge('err','✗ Vérification impossible'); showManual() }
+}
+function setTokenBadge(type, html) {
+  const b = document.getElementById('token_badge'); if(!b) return
+  b.className = 'token-badge'+(type?' show '+type:''); b.innerHTML = html
+}
+
+// ── CHAT ID ──
+async function detectChatId() {
+  if(!state.tokenValid) return
+  const btn = document.getElementById('btn_detect')
+  const icon = document.getElementById('detect_icon')
+  btn.disabled = true
+  icon.innerHTML = '<span class="spin" style="width:13px;height:13px;border-width:2px"></span>'
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${state.token}/getUpdates?limit=10&timeout=0`)
+    const d = await r.json()
+    if(d.ok && d.result.length > 0) {
+      const last = d.result[d.result.length-1]
+      const msg = last.message || last.channel_post || last.edited_message
+      if(msg && msg.from) setChatId(String(msg.from.id))
+      else if(msg && msg.chat) setChatId(String(msg.chat.id))
+      else showNoMsg()
+    } else { showNoMsg() }
+  } catch(e) { showNoMsg() }
+  btn.disabled = false; icon.textContent = '🔍'
+}
+function showNoMsg() {
+  // L'alerte /start est déjà affichée en permanence — on met juste le bouton en rouge
+  const btn = document.getElementById('btn_detect')
+  btn.style.background = 'rgba(239,68,68,.1)'; btn.style.color = '#991b1b'; btn.style.borderColor = 'rgba(239,68,68,.3)'
+  btn.innerHTML = '⚠️ Aucun message reçu — envoyez /start puis réessayez'
+  setTimeout(() => {
+    btn.style.background=''; btn.style.color=''; btn.style.borderColor=''
+    btn.innerHTML = '<span id="detect_icon">🔍</span> Détecter mon Chat ID'
+  }, 3000)
+}
+function setChatId(id) {
+  state.chatId = id; state.chatIdValid = true
+  document.getElementById('chatid_display').textContent = id
+  document.getElementById('chatid_result').classList.add('show')
+  const btn = document.getElementById('btn_next1'); if(btn) btn.disabled = false
+  markDone(1)
+}
+function copyChatId() {
+  navigator.clipboard.writeText(state.chatId)
+  event.target.textContent = 'Copié !'; setTimeout(()=>event.target.textContent='Copier',1500)
+}
+function onManualChatId(val) {
+  const v = val.trim()
+  const icon = document.getElementById('chatid_status_icon')
+  const ok = /^-?\d+$/.test(v) && v.length >= 5
+  if(ok) { state.chatId=v; state.chatIdValid=true; icon.textContent='✅'; icon.classList.add('show'); document.getElementById('btn_next1').disabled=false; markDone(1) }
+  else { state.chatIdValid=false; icon.textContent=v?'❌':''; icon.classList.toggle('show',!!v); document.getElementById('btn_next1').disabled=true }
+}
+
+// ── ROUTER NAME ──
+function onRouterNameInput(val) {
+  state.routerName = val.trim()
+}
+
+// ── IP ──
+function onIpInput(val) {
+  const v = val.trim()
+  const icon = document.getElementById('ip_status_icon')
+  const info = document.getElementById('ip_info')
+  // IP is optional - empty is valid
+  if(v === '') {
+    state.ip=''; state.ipValid=true; icon.textContent=''; icon.classList.remove('show')
+    if(info) info.style.display='none'; document.getElementById('btn_next2').disabled=false; markDone(2)
+    return
+  }
+  const valid = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(v) && v.split('.').every(n=>parseInt(n)<=255)
+  if(valid) {
+    state.ip=v; state.ipValid=true; icon.textContent='✅'; icon.classList.add('show')
+    if(info) info.style.display='flex'; document.getElementById('btn_next2').disabled=false; markDone(2)
+  } else {
+    state.ipValid=false; icon.textContent='❌'; icon.classList.add('show')
+    if(info) info.style.display='none'; document.getElementById('btn_next2').disabled=true
+  }
+}
+
+// ── PROFILS ──
+let profileCount = 0
+function addProfile(name='', validity='', price='') {
+  const list = document.getElementById('profiles_list'); if(!list||profileCount>=20) return
+  const id = profileCount++
+  const row = document.createElement('div')
+  row.id = 'prow_'+id
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:.5rem;align-items:center'
+  row.innerHTML = `
+    <input class="form-input" type="text" id="pname_${id}" placeholder="ex: 1h, 24h…" value="${name}"
+           style="font-family:monospace;font-size:.84rem;margin-bottom:0" oninput="checkProfiles()">
+    <input class="form-input" type="text" id="pvalidity_${id}" placeholder="ex: 1h, 30d…" value="${validity}"
+           style="font-family:monospace;font-size:.84rem;margin-bottom:0" oninput="checkProfiles()"
+           title="Durée MikroTik : 1h, 12h, 24h, 7d, 30d…">
+    <div style="position:relative">
+      <input class="form-input" type="number" id="pprice_${id}" placeholder="0" min="0" value="${price}"
+             style="padding-right:2.8rem;margin-bottom:0" oninput="checkProfiles()">
+      <span style="position:absolute;right:.65rem;top:50%;transform:translateY(-50%);font-size:.72rem;color:var(--dim);pointer-events:none">FCFA</span>
+    </div>
+    <button type="button" onclick="removeProfile(${id})"
+      style="width:32px;height:38px;border-radius:7px;border:1.5px solid #fca5a5;background:#fff5f5;color:#ef4444;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+  `
+  list.appendChild(row); checkProfiles()
+  document.getElementById('btn_add_profile').style.display = profileCount>=20?'none':'flex'
+}
+function removeProfile(id) {
+  const row = document.getElementById('prow_'+id); if(row) row.remove(); checkProfiles()
+  document.getElementById('btn_add_profile').style.display = 'flex'
+}
+function getProfiles() {
+  const p = {}
+  document.querySelectorAll('[id^="pname_"]').forEach(el => {
+    const idx = el.id.replace('pname_','')
+    const name = el.value.trim()
+    const validityEl = document.getElementById('pvalidity_'+idx)
+    const priceEl = document.getElementById('pprice_'+idx)
+    if(name) p[name] = {
+      validity: validityEl ? validityEl.value.trim() : '',
+      price: priceEl ? parseInt(priceEl.value||'0') : 0
+    }
+  }); return p
+}
+function checkProfiles() {
+  const btn = document.getElementById('btn_next3')
+  if(btn) btn.disabled = Object.keys(getProfiles()).length === 0
+}
+function initProfiles() {
+  [['1h','1h',100],['12h','12h',500],['24h','24h',1000],['3j','3d',2500],['7j','7d',5000],['30j','30d',15000]].forEach(([n,v,p])=>addProfile(n,v,p))
+}
+
+// ── RÉSUMÉ ──
+function updateSummary() {
+  const mask = t => t.length>24?t.slice(0,12)+'…'+t.slice(-6):t
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v }
+  set('sum_router', state.routerName || 'Routeur principal')
+  set('sum_token', mask(state.token))
+  set('sum_chatid', state.chatId)
+  set('sum_ip', state.ip)
+  const profiles = getProfiles()
+  set('sum_prices', Object.keys(profiles).length ? Object.entries(profiles).map(([k,v])=>`${k}(${v.validity||'?'}):${v.price}F`).join(' · ') : '—')
+}
+function prepareSubmit() {
+  document.getElementById('f_router_name').value = state.routerName || 'Routeur principal'
+  document.getElementById('f_bot_token').value   = state.token
+  document.getElementById('f_chat_id').value     = state.chatId
+  document.getElementById('f_mikrotik_ip').value = state.ip
+  const c = document.getElementById('f_profiles_container'); c.innerHTML=''
+  const h = document.createElement('input'); h.type='hidden'; h.name='profiles_json'; h.value=JSON.stringify(getProfiles())
+  c.appendChild(h)
+}
+
+document.addEventListener('DOMContentLoaded', () => { initProfiles(); checkProfiles() })
+</script>
+{% endblock %}

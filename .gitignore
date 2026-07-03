@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Données locales / secrets — ne JAMAIS committer
+*.db
+*.db-wal
+*.db-shm
+.env
+.secret_key
+vps_ip.txt
+tenants/

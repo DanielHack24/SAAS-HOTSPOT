@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -c \"import flask, requests, werkzeug; print\\('deps ok'\\)\")",
+      "PowerShell(python -m venv \"$env:TEMP\\\\claude\\\\hspvenv\" 2>$null; & \"$env:TEMP\\\\claude\\\\hspvenv\\\\Scripts\\\\pip.exe\" install -q flask requests gunicorn 2>$null; & \"$env:TEMP\\\\claude\\\\hspvenv\\\\Scripts\\\\python.exe\" -c \"import flask; print\\('flask', flask.__version__\\)\")",
+      "PowerShell(& \"$env:TEMP\\\\claude\\\\hspvenv\\\\Scripts\\\\python.exe\" \"$env:TEMP\\\\claude\\\\c--Users-RODRIGUE-Desktop-hotspot-saas-final-v1\\\\023296e8-a91f-4ee1-8e2d-fe3178bc874c\\\\scratchpad\\\\smoke_test_hub.py\" \"C:\\\\Users\\\\RODRIGUE\\\\Desktop\\\\hotspot-saas-final-v1\\\\hotspot-saas-final\\\\saas\")",
+      "PowerShell(git init 2>&1)",
+      "PowerShell(git add -A)"
+    ]
+  }
+}

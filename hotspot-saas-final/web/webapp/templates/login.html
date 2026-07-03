@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connexion — HotspotPro</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23ff4d1c'/><path d='M8 16.5a10 10 0 0 1 16 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><path d='M11 19.5a6 6 0 0 1 10 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><circle cx='16' cy='23' r='1.5' fill='white'/></svg>">
+<style>
+:root{
+  --accent:#ff4d1c;--ink:#0a0a12;--dim:#6b6b7a;--paper:#f4f1eb;
+  --gold:#f5a623;--border:rgba(10,10,18,.12);--green:#22c55e;
+  --fh:'Times New Roman','Times',Georgia,serif;
+  --fb:Arial,'Helvetica Neue',Helvetica,sans-serif
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{height:100%}body{height:100%}
+body{font-family:var(--fb);min-height:100vh;height:100vh;display:grid;grid-template-columns:1fr 1fr;background:var(--paper);-webkit-font-smoothing:antialiased;overflow:hidden}
+.left{background:var(--ink);display:flex;flex-direction:column;justify-content:center;padding:3.5rem;position:relative;overflow:hidden;min-height:100vh}
+.left::before{content:'';position:absolute;top:-10%;right:-8%;width:60%;height:60%;background:radial-gradient(ellipse,rgba(255,77,28,.22) 0%,transparent 65%);border-radius:50%;pointer-events:none;animation:orbFloat 8s ease-in-out infinite}
+.left::after{content:'';position:absolute;bottom:-15%;left:-5%;width:50%;height:50%;background:radial-gradient(ellipse,rgba(245,166,35,.1) 0%,transparent 65%);border-radius:50%;pointer-events:none;animation:orbFloat 10s ease-in-out infinite reverse}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(2%,3%) scale(1.05)}}
+.brand{font-family:var(--fh);font-size:1.35rem;font-weight:700;font-style:italic;color:#fff;letter-spacing:-.01em;margin-bottom:2.8rem;text-decoration:none;display:flex;align-items:center;gap:.55rem;position:relative;z-index:2}
+.brand-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 12px rgba(255,77,28,.4)}
+.brand span{color:var(--accent);font-style:normal}
+.left-content{position:relative;z-index:2}
+.left h2{font-family:var(--fh);font-size:clamp(1.6rem,2.5vw,2.3rem);font-weight:700;font-style:italic;color:#fff;line-height:1.15;letter-spacing:-.02em;margin-bottom:.7rem}
+.left h2 em{font-style:normal;color:var(--accent)}
+.left-sub{color:rgba(255,255,255,.4);font-size:.9rem;line-height:1.65;margin-bottom:2.2rem}
+.perks{list-style:none;display:flex;flex-direction:column;gap:.75rem}
+.perks li{color:rgba(255,255,255,.65);font-size:.875rem;display:flex;align-items:center;gap:.65rem;opacity:0;transform:translateX(-14px);animation:slideInLeft .5s ease forwards}
+.perks li:nth-child(1){animation-delay:.2s}
+.perks li:nth-child(2){animation-delay:.35s}
+.perks li:nth-child(3){animation-delay:.5s}
+.perks li:nth-child(4){animation-delay:.65s}
+@keyframes slideInLeft{to{opacity:1;transform:none}}
+.perk-dot{width:26px;height:26px;background:rgba(255,77,28,.18);border:1px solid rgba(255,77,28,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem}
+.stat-bar{display:flex;gap:1.8rem;margin-top:2.8rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.08);position:relative;z-index:2}
+.stat-val{font-family:var(--fh);font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-.02em}
+.stat-val span{color:var(--accent)}
+.stat-lab{font-size:.68rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:.1rem}
+.right{display:flex;align-items:center;justify-content:center;padding:3rem 2rem;overflow-y:auto;background:var(--paper);min-height:100vh}
+.form-box{width:100%;max-width:400px;opacity:0;transform:translateY(16px);animation:fadeUp .55s .1s ease forwards}
+@keyframes fadeUp{to{opacity:1;transform:none}}
+.form-header{margin-bottom:1.8rem}
+.form-header h1{font-family:var(--fh);font-size:clamp(1.7rem,2.6vw,2.1rem);font-weight:700;font-style:italic;letter-spacing:-.02em;margin-bottom:.35rem}
+.form-header p{color:var(--dim);font-size:.88rem;line-height:1.55}
+.fg{margin-bottom:1rem;position:relative}
+label{display:block;font-size:.78rem;font-weight:bold;margin-bottom:.32rem;color:var(--ink)}
+.input-wrap{position:relative}
+.input-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--dim);font-size:.88rem;pointer-events:none}
+input[type=email],input[type=password],input[type=text],input[type=tel]{width:100%;padding:.7rem .85rem .7rem 2.4rem;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;font-family:var(--fb);color:var(--ink);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,77,28,.1)}
+.submit{width:100%;padding:.78rem;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:.95rem;font-weight:bold;cursor:pointer;font-family:var(--fb);transition:background .2s,transform .15s,box-shadow .2s;margin-top:.5rem;box-shadow:0 4px 16px rgba(255,77,28,.28);display:flex;align-items:center;justify-content:center;gap:.5rem}
+.submit:hover{background:#e03a10;transform:translateY(-1px);box-shadow:0 6px 22px rgba(255,77,28,.38)}
+.submit:active{transform:translateY(0)}
+.submit svg{transition:transform .2s}
+.submit:hover svg{transform:translateX(3px)}
+.trust-row{display:flex;gap:.55rem;margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid var(--border)}
+.trust-item{flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:.55rem .6rem;display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--dim);line-height:1.3}
+.trust-item strong{color:var(--ink);display:block;font-size:.76rem}
+.form-foot{text-align:center;margin-top:1.2rem;font-size:.85rem;color:var(--dim)}
+.form-foot a{color:var(--accent);text-decoration:none;font-weight:bold}
+.form-foot a:hover{text-decoration:underline}
+.flashes{margin-bottom:1rem}
+.flash{padding:.6rem .95rem;border-radius:8px;font-size:.83rem;margin-bottom:.35rem;animation:flashIn .3s ease}
+@keyframes flashIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.flash.warning{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.eye-btn{position:absolute;right:.85rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--dim);font-size:.82rem;padding:0;line-height:1}
+@media(max-width:700px){body{grid-template-columns:1fr;overflow:auto}.left{display:none}.right{padding:2.5rem 1.5rem;min-height:100vh}}
+</style>
+</head>
+<body>
+<div class="left">
+  <a href="{{ logo_url() }}" class="brand">
+    <span class="brand-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/>
+      </svg>
+    </span>
+    Hotspot<span>Pro</span>
+  </a>
+  <div class="left-content">
+    <h2>Vos ventes,<br>trackées <em>automatiquement</em><br>sur Telegram.</h2>
+    <p class="left-sub">Plateforme de comptabilité pour opérateurs hotspot MikroTik au Togo. Simple, rapide, fiable.</p>
+    <ul class="perks">
+      <li><span class="perk-dot">📡</span> Bot Telegram dédié pour chaque opérateur</li>
+      <li><span class="perk-dot">📊</span> Stats en temps réel par vendeur</li>
+      <li><span class="perk-dot">⚙️</span> Script MikroTik généré automatiquement</li>
+      <li><span class="perk-dot">⚡</span> Déploiement en moins de 5 minutes</li>
+    </ul>
+    <div class="stat-bar">
+      <div class="stat-item">
+        <div class="stat-val">50<span>+</span></div>
+        <div class="stat-lab">Opérateurs actifs</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">99<span>%</span></div>
+        <div class="stat-lab">Uptime garanti</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">&lt;5<span>min</span></div>
+        <div class="stat-lab">Pour démarrer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="right">
+  <div class="form-box">
+    <div class="form-header">
+      <h1>Bon retour 👋</h1>
+      <p>Connectez-vous à votre espace HotspotPro</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flashes">
+      {% for c,m in messages %}<div class="flash {{c}}">{{m}}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+      {{ csrf_field() }}
+      <div class="fg">
+        <label>Adresse email</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input type="email" name="email" placeholder="vous@exemple.com" required autocomplete="email">
+        </div>
+      </div>
+      <div class="fg">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" name="password" id="pwdInput" placeholder="••••••••" required autocomplete="current-password">
+          <button type="button" class="eye-btn" onclick="togglePwd()" title="Afficher/masquer">👁</button>
+        </div>
+      </div>
+      <button type="submit" class="submit">
+        Se connecter
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </form>
+
+    <div class="trust-row">
+      <div class="trust-item">🔐 <div><strong>Sécurisé</strong>HTTPS chiffré</div></div>
+      <div class="trust-item">💳 <div><strong>Paiement</strong>Via FedaPay</div></div>
+      <div class="trust-item">⚡ <div><strong>Rapide</strong>Accès instantané</div></div>
+    </div>
+
+    <div class="form-foot">Pas encore de compte ? <a href="{{ url_for('register') }}">Créer un compte →</a></div>
+  </div>
+</div>
+<script>function togglePwd(){const i=document.getElementById('pwdInput');i.type=i.type==='password'?'text':'password'}</script>
+</body>
+</html>

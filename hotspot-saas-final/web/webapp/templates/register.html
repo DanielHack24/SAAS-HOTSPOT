@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Créer un compte — HotspotPro</title>
+<style>
+:root{--accent:#ff4d1c;--ink:#0a0a12;--dim:#6b6b7a;--border:rgba(10,10,18,.12);--gold:#f5a623;
+      --fh:'Times New Roman','Times',Georgia,serif;
+      --fb:Arial,'Helvetica Neue',Helvetica,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:#f0ede6;-webkit-font-smoothing:antialiased}
+.left{background:var(--ink);display:flex;flex-direction:column;justify-content:center;padding:3.5rem;position:relative;overflow:hidden;min-height:100vh}
+.left::after{content:'';position:absolute;top:-10%;left:-8%;width:55%;height:55%;background:radial-gradient(ellipse,rgba(255,77,28,.17) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.brand{font-family:var(--fh);font-size:1.35rem;font-weight:700;font-style:italic;color:#fff;letter-spacing:-.01em;margin-bottom:2rem;text-decoration:none;display:block}
+.brand span{color:var(--accent);font-style:normal}
+.left h2{font-family:var(--fh);font-size:clamp(1.3rem,2.1vw,1.8rem);font-weight:700;font-style:italic;color:#fff;line-height:1.2;letter-spacing:-.01em;margin-bottom:.45rem;position:relative;z-index:1}
+.left-sub{color:rgba(255,255,255,.42);font-size:.875rem;margin-bottom:1.4rem;line-height:1.6;position:relative;z-index:1}
+
+/* Plan selector */
+.plan-list{display:flex;flex-direction:column;gap:.5rem;position:relative;z-index:1}
+.plan-opt{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);
+  border-radius:9px;padding:.7rem 1rem;cursor:pointer;transition:all .18s;user-select:none;
+}
+.plan-opt:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.plan-opt.selected{background:rgba(255,77,28,.18);border-color:var(--accent)}
+.plan-opt-left{display:flex;align-items:center;gap:.55rem}
+.plan-radio{
+  width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.3);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .18s;
+}
+.plan-opt.selected .plan-radio{border-color:var(--accent);background:var(--accent)}
+.plan-opt.selected .plan-radio::after{content:'';width:5px;height:5px;background:#fff;border-radius:50%;display:block}
+.plan-name{font-family:var(--fb);font-size:.875rem;font-weight:bold;color:#fff}
+.star-badge{font-size:.62rem;background:var(--gold);color:var(--ink);padding:.1rem .45rem;border-radius:100px;font-weight:bold;letter-spacing:.04em;margin-left:.35rem}
+.plan-price{font-family:var(--fh);font-size:1rem;font-weight:700;color:var(--accent)}
+.plan-opt.selected .plan-price{color:#fff}
+
+/* Right */
+.right{display:flex;align-items:center;justify-content:center;padding:2.5rem 2rem;overflow-y:auto}
+.form-box{width:100%;max-width:415px}
+.form-box h1{font-family:var(--fh);font-size:clamp(1.55rem,2.3vw,1.95rem);font-weight:700;font-style:italic;letter-spacing:-.01em;margin-bottom:.3rem}
+.form-box p{color:var(--dim);font-size:.875rem;margin-bottom:1.1rem;line-height:1.5}
+.plan-info{
+  background:rgba(255,77,28,.07);border:1px solid rgba(255,77,28,.18);
+  border-radius:7px;padding:.52rem .85rem;font-size:.82rem;color:var(--ink);
+  margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;
+}
+.plan-info strong{color:var(--accent);font-weight:bold}
+.fg{margin-bottom:.88rem}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+label{display:block;font-size:.78rem;font-weight:bold;margin-bottom:.28rem;color:var(--ink)}
+input{width:100%;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.87rem;font-family:var(--fb);color:var(--ink);background:#fff;transition:border-color .2s;outline:none}
+input:focus{border-color:var(--accent)}
+.hint{font-size:.71rem;color:var(--dim);margin-top:.2rem}
+.submit{width:100%;padding:.72rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.94rem;font-weight:bold;cursor:pointer;font-family:var(--fb);transition:background .2s;margin-top:.3rem}
+.submit:hover{background:#e03a10}
+.form-foot{text-align:center;margin-top:1rem;font-size:.83rem;color:var(--dim)}
+.form-foot a{color:var(--accent);text-decoration:none;font-weight:bold}
+.form-foot a:hover{text-decoration:underline}
+.flashes{margin-bottom:.8rem}
+.flash{padding:.56rem .88rem;border-radius:7px;font-size:.82rem;margin-bottom:.3rem}
+.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+@media(max-width:700px){body{grid-template-columns:1fr}.left{display:none}.right{padding:2rem 1.4rem}}
+</style>
+</head>
+<body>
+<div class="left">
+  <a href="{{ logo_url() }}" class="brand">Hotspot<span>Pro</span></a>
+  <h2>Démarrez votre système de comptabilité</h2>
+  <p class="left-sub">Choisissez la durée qui vous convient. Paiement simple par Mobile Money.</p>
+
+  <div class="plan-list" id="planList">
+    {% for key, p in plans.items() %}
+    <div class="plan-opt {% if key=='3m' %}popular{% endif %}"
+         data-plan="{{ key }}"
+         data-label="{{ p.label }}"
+         data-price="{{ '{:,}'.format(p.price).replace(',', ' ') }} FCFA"
+         onclick="selectPlan(this)">
+      <div class="plan-opt-left">
+        <div class="plan-radio"></div>
+        <span class="plan-name">{{ p.label }}{% if key=='3m' %}<span class="star-badge">⭐ Populaire</span>{% endif %}</span>
+      </div>
+      <span class="plan-price">{{ '{:,}'.format(p.price).replace(',', ' ') }} FCFA</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="right">
+  <div class="form-box">
+    <h1>Créer mon compte</h1>
+    <p>Inscription gratuite · Abonnement payable après inscription</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="flashes">{% for c,m in messages %}<div class="flash {{c}}">{{m}}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <div class="plan-info">
+      Plan sélectionné : <strong id="planInfoText">—</strong>
+    </div>
+
+    <form method="POST" id="regForm">
+      {{ csrf_field() }}
+      <input type="hidden" name="plan" id="planInput" value="">
+      <div class="fg">
+        <label>Nom complet</label>
+        <input type="text" name="full_name" placeholder="Jean-Claude Dupont" required value="{{ request.form.get('full_name','') }}">
+      </div>
+      <div class="fg2">
+        <div class="fg">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="vous@exemple.com" required value="{{ request.form.get('email','') }}">
+        </div>
+        <div class="fg">
+          <label>Téléphone</label>
+          <input type="tel" name="phone" placeholder="90 00 00 00" value="{{ request.form.get('phone','') }}">
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="fg">
+          <label>Mot de passe</label>
+          <input type="password" name="password" placeholder="••••••••" required minlength="6">
+          <div class="hint">Minimum 6 caractères</div>
+        </div>
+        <div class="fg">
+          <label>Confirmer</label>
+          <input type="password" name="password2" placeholder="••••••••" required>
+        </div>
+      </div>
+      <button type="submit" class="submit">Créer mon compte →</button>
+    </form>
+    <div class="form-foot">Déjà un compte ? <a href="{{ url_for('login') }}">Se connecter</a></div>
+  </div>
+</div>
+
+<script>
+function selectPlan(el){
+  document.querySelectorAll('.plan-opt').forEach(o=>o.classList.remove('selected'))
+  el.classList.add('selected')
+  document.getElementById('planInput').value = el.dataset.plan
+  document.getElementById('planInfoText').textContent = el.dataset.label + ' — ' + el.dataset.price
+}
+// Sélection initiale depuis URL ou défaut 3m
+const urlPlan = new URLSearchParams(window.location.search).get('plan') || '3m'
+const init = document.querySelector(`.plan-opt[data-plan="${urlPlan}"]`) || document.querySelector('.plan-opt[data-plan="3m"]')
+if(init) selectPlan(init)
+</script>
+</body>
+</html>
