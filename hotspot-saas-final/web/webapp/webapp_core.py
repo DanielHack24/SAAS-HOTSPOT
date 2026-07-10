@@ -7,6 +7,7 @@ Les modules de routes importent `app` d'ici (et non de app.py) pour
 import os, sys
 
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 
@@ -16,6 +17,22 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 if config.APP_URL.startswith("https://"):
     app.config["SESSION_COOKIE_SECURE"] = True
+
+# Derrière nginx, request.remote_addr serait sinon toujours 127.0.0.1 :
+# le rate limiting par IP (login, mot de passe oublié) ne fonctionnerait
+# pas et un attaquant pourrait bloquer le compte de n'importe qui.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
+
+@app.after_request
+def _security_headers(resp):
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if config.APP_URL.startswith("https://"):
+        resp.headers.setdefault("Strict-Transport-Security",
+                                "max-age=31536000; includeSubDomains")
+    return resp
 
 # ── Pont vers le moteur SaaS (absent en dev local) ─────────────
 sys.path.insert(0, os.path.join(config.SAAS_DIR, "core"))

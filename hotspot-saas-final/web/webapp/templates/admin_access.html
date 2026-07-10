@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Sécurité — HotspotPro{% endblock %}
+{% block topbar_title %}Sécurité &middot; Accès routeurs{% endblock %}
+{% block topbar_subtitle %}Journal des accès et détection de partage d'abonnement{% endblock %}
+
+{% block extra_head %}
+<style>
+.sec-intro{font-size:.84rem;color:var(--muted);line-height:1.6;margin-bottom:1.1rem}
+.win-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.1rem}
+.win-bar a{font-size:.78rem;padding:.35rem .7rem;border-radius:7px;border:1px solid var(--border);color:var(--muted);text-decoration:none;background:var(--surface)}
+.win-bar a.on{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+.ip-list{font-family:var(--fm);font-size:.72rem;color:var(--ink);word-break:break-all;line-height:1.5}
+.ipc{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 .45rem;border-radius:7px;font-weight:700;font-size:.82rem;font-variant-numeric:tabular-nums}
+.ipc.warn{background:#FBE3E0;color:#9A3412}
+.muted-sm{font-size:.73rem;color:var(--muted)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not access_ok %}
+<div class="alert alert-warning">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <div>Le journal d'accès n'est pas disponible (module <code>access_log</code> introuvable). Vérifiez <code>HOTSPOT_SAAS_DIR</code>.</div>
+</div>
+{% endif %}
+
+<p class="sec-intro">
+  Chaque notification de vente (script <strong>On&nbsp;Login</strong>) arrive avec l'<strong>empreinte de l'appareil</strong>
+  (numéro de série matériel, sinon hostname) en plus de l'IP. La détection de partage se base sur l'<strong>appareil</strong>,
+  pas sur l'IP : un routeur dont l'IP WAN change (réseau mobile) reste <strong>un seul appareil</strong> et ne déclenche donc
+  plus de fausse alerte. Un même slug vu depuis <strong>2&nbsp;appareils distincts</strong> = script recopié sur un 2ᵉ routeur non payé.
+</p>
+
+<div class="win-bar">
+  <span class="muted-sm" style="align-self:center;margin-right:.3rem">Fenêtre :</span>
+  {% for h, lbl in [(24,'24 h'),(48,'48 h'),(168,'7 jours'),(720,'30 jours')] %}
+  <a href="{{ url_for('admin_access', window=h) }}" class="{% if window==h %}on{% endif %}">{{ lbl }}</a>
+  {% endfor %}
+</div>
+
+<!-- Alertes de partage -->
+<div class="card" style="margin-bottom:1.2rem;{% if alerts %}border-left:3px solid var(--accent){% endif %}">
+  <div class="card-title">
+    Partage suspecté
+    <span style="font-size:.72rem;color:{% if alerts %}var(--accent){% else %}var(--muted){% endif %};font-weight:600;margin-left:.4rem">
+      {{ alerts|length }} slug{{ 's' if alerts|length != 1 }} concerné{{ 's' if alerts|length != 1 }}
+    </span>
+  </div>
+  {% if alerts %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client / Slug</th><th>Appareils</th><th>Empreintes (série/hostname)</th><th>IP vues</th><th>Ventes</th><th>Token KO</th><th>Dernier accès</th></tr></thead>
+      <tbody>
+        {% for a in alerts %}
+        <tr>
+          <td>
+            {% if a.owner %}<strong>{{ a.owner.name }}</strong><br>
+            <span class="muted-sm">{{ a.owner.label or a.owner.email }}</span><br>{% endif %}
+            <span class="mono muted-sm">{{ a.slug }}</span>
+          </td>
+          <td><span class="ipc warn">{{ a.device_count }}</span></td>
+          <td class="ip-list" style="max-width:240px">
+            {{ a.devices or '—' }}
+            {% if a.names %}<br><span class="muted-sm">{{ a.names }}</span>{% endif %}
+          </td>
+          <td class="ip-list muted-sm" style="max-width:180px">{{ a.ips }}</td>
+          <td class="mono" style="font-variant-numeric:tabular-nums">{{ a.total_hits }}</td>
+          <td class="mono" style="color:{% if a.bad_hits %}var(--accent){% else %}var(--muted){% endif %}">{{ a.bad_hits or 0 }}</td>
+          <td class="mono muted-sm" style="white-space:nowrap">{{ a.last_seen[:16] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:1.4rem;color:var(--muted);font-size:.85rem">
+    Aucun partage détecté sur cette période. Chaque abonnement n'est vu que depuis un seul appareil.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Journal complet -->
+<div class="card">
+  <div class="card-title">Journal d'accès <span style="font-size:.72rem;color:var(--muted);font-weight:600;margin-left:.4rem">{{ logs|length }} entrée{{ 's' if logs|length != 1 }} (IP distinctes)</span></div>
+  {% if logs %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Slug</th><th>Client</th><th>IP source</th><th>Canal</th><th>Hostname</th><th>Empreinte appareil</th><th>Ventes</th><th>Token KO</th><th>1er vu</th><th>Dernier vu</th></tr></thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td class="mono" style="font-size:.76rem">{{ l.slug }}</td>
+          <td style="font-size:.8rem">{% if l.owner %}{{ l.owner.name }}{% else %}<span class="muted-sm">—</span>{% endif %}</td>
+          <td class="mono" style="font-size:.78rem">{{ l.source_ip }}</td>
+          <td class="muted-sm">{{ l.last_via or 'on-login' }}</td>
+          <td class="mono muted-sm">{{ l.router_id or '—' }}</td>
+          <td class="mono muted-sm">{{ l.device_id or '—' }}</td>
+          <td class="mono" style="font-variant-numeric:tabular-nums">{{ l.hits }}</td>
+          <td class="mono" style="color:{% if l.bad_token %}var(--accent){% else %}var(--muted){% endif %}">{{ l.bad_token or 0 }}</td>
+          <td class="mono muted-sm" style="white-space:nowrap">{{ l.first_seen[:16] }}</td>
+          <td class="mono muted-sm" style="white-space:nowrap">{{ l.last_seen[:16] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:1.4rem;color:var(--muted);font-size:.85rem">
+    Aucun accès enregistré pour l'instant. Les entrées apparaissent dès qu'un routeur envoie une vente.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

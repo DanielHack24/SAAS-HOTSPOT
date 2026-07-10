@@ -201,7 +201,7 @@ Group=$APP_USER
 WorkingDirectory=$WEB_DIR/webapp
 EnvironmentFile=$WEB_DIR/.env
 Environment=PYTHONPATH=$SAAS_DIR/core
-ExecStart=$VENV/bin/gunicorn -w 2 -b 127.0.0.1:5000 app:app
+ExecStart=$VENV/bin/gunicorn -w 2 --timeout 120 -b 127.0.0.1:5000 app:app
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -219,51 +219,31 @@ systemctl daemon-reload
 systemctl enable --now hotspot-web
 ok "Service hotspot-web démarré"
 
-# ── Nginx ─────────────────────────────────────────────────────────
+# ── Nginx (reverse proxy via le script dédié, source unique) ──────
 hr
-info "Configuration Nginx…"
-cat > /etc/nginx/sites-available/hotspotpro << 'NGINXEOF'
-server {
-    listen 80;
-    server_name _;
-    client_max_body_size 2M;
-
-    # API tenants (hub multi-tenant) — utilisée par les MikroTik
-    location ^~ /t/ {
-        proxy_pass         http://127.0.0.1:8010;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_read_timeout 30s;
-    }
-
-    location / {
-        proxy_pass         http://127.0.0.1:5000;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_read_timeout 60s;
-    }
-
-    location /static/ {
-        alias /opt/hotspot-saas-web/webapp/static/;
-        expires 7d;
-        add_header Cache-Control "public";
-    }
-}
-NGINXEOF
-
-ln -sf /etc/nginx/sites-available/hotspotpro /etc/nginx/sites-enabled/hotspotpro
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
-ok "Nginx configuré (interface web + API tenants sur /t/)"
+info "Configuration Nginx (reverse proxy)…"
+NGINX_SETUP="$SCRIPT_DIR/../deploy/setup_nginx.sh"
+if [ -f "$NGINX_SETUP" ]; then
+  # Le domaine est lu depuis APP_URL du .env déjà écrit ci-dessus.
+  # stdin depuis /dev/null : exécution 100 % non interactive.
+  bash "$NGINX_SETUP" < /dev/null
+  ok "Nginx configuré via deploy/setup_nginx.sh (web + API /t/ + static)"
+else
+  warn "deploy/setup_nginx.sh introuvable — configurez nginx ensuite :"
+  warn "sudo bash deploy/setup_nginx.sh"
+fi
 
 # ── Cron expiration ───────────────────────────────────────────────
 hr
 info "Ajout du cron de vérification des expirations (6h chaque jour)…"
-( crontab -l 2>/dev/null | grep -v 'check_expiry'; \
-  echo "0 6 * * * curl -s \"http://localhost/cron/check_expiry?key=${CRON_KEY}\" > /dev/null 2>&1" \
+# Clé passée en en-tête X-Cron-Key (jamais en query string : elle finirait
+# dans les logs nginx). Appel direct à gunicorn (127.0.0.1:5000) : évite la
+# redirection 80->443 et ne traverse pas nginx.
+( crontab -l 2>/dev/null | grep -v 'check_expiry' | grep -v 'sync_tickets'; \
+  echo "0 6 * * * curl -s -H \"X-Cron-Key: ${CRON_KEY}\" \"http://127.0.0.1:5000/cron/check_expiry\" > /dev/null 2>&1"; \
+  echo "*/5 * * * * curl -s -H \"X-Cron-Key: ${CRON_KEY}\" \"http://127.0.0.1:5000/cron/sync_tickets\" > /dev/null 2>&1" \
 ) | crontab -
-ok "Cron configuré"
+ok "Crons configurés (expirations 6h + synchro tickets toutes les 5 min)"
 
 # ── Test email si Brevo configuré ────────────────────────────────
 if [ -n "$BREVO_KEY_INPUT" ]; then

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Profil admin — HotspotPro{% endblock %}
+{% block topbar_title %}Profil administrateur{% endblock %}
+{% block topbar_subtitle %}Informations, icône et mot de passe{% endblock %}
+
+{% block extra_head %}
+<style>
+.avatar-picker{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.3rem}
+.avatar-swatch{
+  width:42px;height:42px;border-radius:10px;cursor:pointer;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fh);font-weight:600;color:#fff;font-size:.95rem;
+  border:2px solid transparent;transition:transform .15s,border-color .15s;
+}
+.avatar-swatch:hover{transform:scale(1.08)}
+.avatar-swatch.selected{border-color:var(--ink);box-shadow:0 0 0 2px var(--surface) inset}
+.avatar-swatch input{position:absolute;opacity:0;pointer-events:none}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <!-- Informations -->
+  <div class="card" id="avatar">
+    <div class="card-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Informations administrateur
+    </div>
+    <form method="POST" action="{{ url_for('admin_account') }}">
+      {{ csrf_field() }}
+      <input type="hidden" name="action" value="update_profile">
+      <div class="form-group">
+        <label class="form-label">Nom complet</label>
+        <input class="form-input" type="text" name="full_name" value="{{ admin.full_name }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email <span style="color:var(--muted);font-weight:400">(non modifiable)</span></label>
+        <input class="form-input" type="email" value="{{ admin.email }}" disabled>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Couleur de l'icône</label>
+        <div class="avatar-picker">
+          {% for color in avatar_colors %}
+          <label class="avatar-swatch {% if (admin.avatar_color or '#12263A') == color %}selected{% endif %}" style="background:{{ color }}">
+            <input type="radio" name="avatar_color" value="{{ color }}"
+                   {% if (admin.avatar_color or '#12263A') == color %}checked{% endif %}
+                   onchange="this.closest('.avatar-picker').querySelectorAll('.avatar-swatch').forEach(s=>s.classList.remove('selected'));this.closest('.avatar-swatch').classList.add('selected')">
+            {{ (admin.full_name or '?')[0].upper() }}
+          </label>
+          {% endfor %}
+        </div>
+        <div class="form-hint">Cette couleur s'applique à votre avatar dans la barre latérale et le menu.</div>
+      </div>
+      <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+    </form>
+  </div>
+
+  <!-- Mot de passe -->
+  <div class="card" id="password">
+    <div class="card-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Changer le mot de passe
+    </div>
+    <form method="POST" action="{{ url_for('admin_change_password') }}">
+      {{ csrf_field() }}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+        <div class="form-group">
+          <label class="form-label">Nouveau mot de passe</label>
+          <input class="form-input" type="password" name="new_password" required minlength="8" placeholder="8 caractères minimum">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmer</label>
+          <input class="form-input" type="password" name="new_password2" required placeholder="Confirmez">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-outline">Changer le mot de passe</button>
+    </form>
+  </div>
+
+  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline" style="justify-content:center">
+    Retour au tableau de bord
+  </a>
+
+</div>
+{% endblock %}

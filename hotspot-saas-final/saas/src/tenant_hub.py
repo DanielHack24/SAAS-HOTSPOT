@@ -14,10 +14,18 @@ Avantages vs 1 processus/client :
   - tarifs rechargés à chaud (plus besoin de redéployer)
   - provisioning = simple INSERT en base + POST /reload
 """
-import os, sqlite3, threading, json, time
+import os, sqlite3, threading, json, time, html, secrets
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 import urllib.request
+
+
+def esc(v) -> str:
+    """Échappe pour les messages Telegram parse_mode=HTML. username/profile
+    viennent de la requête MikroTik : sans échappement, un ticket nommé
+    <b>… casserait ou falsifierait les notifications."""
+    return html.escape(str(v), quote=False)
 
 SAAS_DIR = os.environ.get("HOTSPOT_SAAS_DIR", "/opt/hotspot-saas")
 HUB_PORT = int(os.environ.get("TENANT_HUB_PORT", "8010"))
@@ -27,6 +35,8 @@ REFRESH_INTERVAL = 60                       # re-lecture périodique de central.
 import sys
 sys.path.insert(0, os.path.join(SAAS_DIR, "core"))
 from tenant_db import get_all_tenants, tenant_sales_db  # noqa: E402
+import tickets  # noqa: E402  (module partagé : vendeurs + attribution)
+import access_log  # noqa: E402  (journal d'accès routeur + détection de partage)
 
 app = Flask(__name__)
 
@@ -150,6 +160,8 @@ def init_sales_db(slug: str):
     """)
     conn.commit()
     conn.close()
+    # Tables vendeurs / tickets / lots (module partagé)
+    tickets.ensure_schema(tenant_sales_db(slug))
 
 
 def is_already_registered(slug: str, username: str) -> bool:
@@ -288,15 +300,27 @@ def edit_msg(bot_token, chat_id, msg_id, text, markup=None):
     _tg(bot_token, "editMessageText", p)
 
 
-# ── Claviers inline ──────────────────────────────────────────
+# ── Volet de navigation FIXE (reply keyboard persistant) ─────
+# Reste docké en bas de la conversation même quand des notifications de
+# vente arrivent (les inline keyboards, eux, défilent avec les messages).
 
-def kb_main():
-    return {"inline_keyboard": [
-        [{"text": "📊 Statistiques par vendeur", "callback_data": "menu_sellers"}],
-        [{"text": "🏆 Classement du jour",        "callback_data": "menu_ranking"}],
-        [{"text": "📈 Résumé global",              "callback_data": "menu_global"}],
-    ]}
+BTN_SELLERS = "📊 Vendeurs"
+BTN_RANKING = "🏆 Classement du jour"
+BTN_GLOBAL  = "📈 Résumé global"
 
+
+def kb_persistent():
+    return {
+        "keyboard": [
+            [{"text": BTN_SELLERS}],
+            [{"text": BTN_RANKING}, {"text": BTN_GLOBAL}],
+        ],
+        "resize_keyboard": True,
+        "is_persistent": True,
+    }
+
+
+# ── Claviers inline (drill-down vendeur → période) ───────────
 
 def kb_sellers(sellers):
     rows = [[{"text": f"👤 {s}", "callback_data": f"seller_{s}"}] for s in sellers]
@@ -317,7 +341,9 @@ def kb_periods(seller):
 # ── Messages ─────────────────────────────────────────────────
 
 def msg_welcome():
-    return "🏪 <b>Comptabilité Hotspot MikroTik</b>\n\nBienvenue ! Utilisez les boutons ci-dessous."
+    return ("🏪 <b>Comptabilité Hotspot MikroTik</b>\n\n"
+            "Bienvenue ! Le menu reste toujours accessible en bas de l'écran. "
+            "Touchez un bouton pour consulter vos statistiques.")
 
 
 def msg_sellers(sellers):
@@ -331,7 +357,7 @@ def msg_stats(slug, seller, period):
     t = get_seller_total(slug, seller)
     e = {"today": "📅", "week": "📆", "month": "🗓", "year": "📊"}.get(period, "📊")
     return (
-        f"👤 <b>{seller}</b>\n{'─'*28}\n"
+        f"👤 <b>{esc(seller)}</b>\n{'─'*28}\n"
         f"{e} <b>{d['label']}</b>\n\n"
         f"🎟️ Ventes   : <b>{d['sales']}</b>\n"
         f"💰 Recettes : <b>{d['revenue']:,} FCFA</b>\n"
@@ -348,7 +374,7 @@ def msg_ranking(slug):
     lines  = [f"🏆 <b>Classement — {datetime.now().strftime('%d/%m/%Y')}</b>\n"]
     for i, s in enumerate(stats):
         m = medals[i] if i < 3 else f"  {i+1}."
-        lines.append(f"{m} <b>{s['seller']}</b> — {s['sales']} vente(s) · {s['revenue']:,} FCFA")
+        lines.append(f"{m} <b>{esc(s['seller'])}</b> — {s['sales']} vente(s) · {s['revenue']:,} FCFA")
     lines.append(f"\n💼 Total : <b>{sum(s['sales'] for s in stats)} ventes</b> · "
                  f"<b>{sum(s['revenue'] for s in stats):,} FCFA</b>")
     return "\n".join(lines)
@@ -383,15 +409,15 @@ def msg_sale(slug, seller, username, profile, amount, sale_id, router_display=""
     stats = get_today_stats(slug, seller)
     ds = stats[0]["sales"]   if stats else 1
     dr = stats[0]["revenue"] if stats else amount
-    router_line = f"\n📡 Routeur  : <b>{router_display}</b>" if router_display else ""
+    router_line = f"\n📡 Routeur  : <b>{esc(router_display)}</b>" if router_display else ""
     return (
         f"🔔 <b>Nouvelle vente</b> — {now}\n{'─'*28}\n"
-        f"{emoji} Profil   : <b>{profile}</b>\n"
-        f"👤 Vendeur : <b>{seller}</b>\n"
-        f"🎟️ Ticket  : <code>{username}</code>\n"
+        f"{emoji} Profil   : <b>{esc(profile)}</b>\n"
+        f"👤 Vendeur : <b>{esc(seller)}</b>\n"
+        f"🎟️ Ticket  : <code>{esc(username)}</code>\n"
         f"💰 Montant : <b>{amount:,} FCFA</b>{router_line}\n"
         f"{'─'*28}\n"
-        f"📊 Aujourd'hui ({seller}) : <b>{ds} vente(s)</b> · <b>{dr:,} FCFA</b>\n"
+        f"📊 Aujourd'hui ({esc(seller)}) : <b>{ds} vente(s)</b> · <b>{dr:,} FCFA</b>\n"
         f"<i>#{sale_id}</i>"
     )
 
@@ -431,13 +457,17 @@ class BotWorker(threading.Thread):
             msg     = update["message"]
             chat_id = str(msg["chat"]["id"])
             text    = msg.get("text", "").strip()
-            if text.startswith("/stats"):
-                send_msg(self.bot_token, chat_id, msg_global(slug), markup=kb_main())
-            elif text.startswith("/vendeurs"):
+            # Boutons du volet fixe (arrivent comme des messages texte)
+            if text == BTN_GLOBAL or text.startswith("/stats"):
+                send_msg(self.bot_token, chat_id, msg_global(slug))
+            elif text == BTN_RANKING:
+                send_msg(self.bot_token, chat_id, msg_ranking(slug))
+            elif text == BTN_SELLERS or text.startswith("/vendeurs"):
                 sellers = get_all_sellers(slug)
                 send_msg(self.bot_token, chat_id, msg_sellers(sellers), markup=kb_sellers(sellers))
             else:
-                send_msg(self.bot_token, chat_id, msg_welcome(), markup=kb_main())
+                # /start, /menu ou autre : (re)dock le volet fixe en bas
+                send_msg(self.bot_token, chat_id, msg_welcome(), markup=kb_persistent())
 
         elif "callback_query" in update:
             cb      = update["callback_query"]
@@ -447,18 +477,14 @@ class BotWorker(threading.Thread):
             _tg(self.bot_token, "answerCallbackQuery", {"callback_query_id": cb["id"]})
 
             if data == "menu_main":
-                edit_msg(self.bot_token, chat_id, msg_id, msg_welcome(), markup=kb_main())
+                edit_msg(self.bot_token, chat_id, msg_id, msg_welcome())
             elif data == "menu_sellers":
                 sellers = get_all_sellers(slug)
                 edit_msg(self.bot_token, chat_id, msg_id, msg_sellers(sellers), markup=kb_sellers(sellers))
-            elif data == "menu_ranking":
-                edit_msg(self.bot_token, chat_id, msg_id, msg_ranking(slug), markup=kb_main())
-            elif data == "menu_global":
-                edit_msg(self.bot_token, chat_id, msg_id, msg_global(slug), markup=kb_main())
             elif data.startswith("seller_"):
                 seller = data[7:]
                 edit_msg(self.bot_token, chat_id, msg_id,
-                         f"👤 <b>{seller}</b>\n\nChoisissez la période :", markup=kb_periods(seller))
+                         f"👤 <b>{esc(seller)}</b>\n\nChoisissez la période :", markup=kb_periods(seller))
             elif data.startswith("stat_"):
                 parts = data.split("_", 2)
                 if len(parts) == 3:
@@ -506,18 +532,59 @@ bot_manager = BotManager()
 
 
 # ═══════════════════════════════════════════════
+# RATE LIMITING PAR SLUG (protection flood /t/<slug>/login)
+# ═══════════════════════════════════════════════
+
+RATE_MAX    = 120   # requêtes max…
+RATE_WINDOW = 60    # …par fenêtre de 60 s et par slug
+
+_rate: dict[str, list[float]] = {}
+_rate_lock = threading.Lock()
+
+
+def slug_rate_limited(slug: str) -> bool:
+    now = time.time()
+    with _rate_lock:
+        stamps = [t for t in _rate.get(slug, []) if now - t < RATE_WINDOW]
+        stamps.append(now)
+        _rate[slug] = stamps
+        return len(stamps) > RATE_MAX
+
+
+def _hub_key_ok() -> bool:
+    """Clé exigée en en-tête X-Hub-Key UNIQUEMENT (une query string ?key=
+    finirait dans les logs). Comparaison a temps constant. Si HUB_KEY n'est
+    pas configurée, on REFUSE : ces endpoints exposent le chiffre d'affaires
+    des clients."""
+    if not HUB_KEY:
+        return False
+    sent = request.headers.get("X-Hub-Key", "")
+    return bool(sent) and secrets.compare_digest(sent, HUB_KEY)
+
+
+# ═══════════════════════════════════════════════
 # TRAITEMENT VENTE
 # ═══════════════════════════════════════════════
 
-def process_sale(tenant: dict, username, profile, ip, router_display=""):
-    """Traite la vente en arrière-plan APRÈS avoir répondu à MikroTik."""
-    slug = tenant["slug"]
-    if is_already_registered(slug, username):
-        return   # Ticket déjà vendu, on ignore silencieusement
+# Pool borné : un thread par requête permettrait à un flood de créer
+# des milliers de threads.
+_sale_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="sale")
 
-    parts  = username.split("-", 1)
-    seller = parts[0].capitalize() if parts else username
-    amount = tenant["price_map"].get(profile, 0)
+def process_sale(tenant: dict, username, profile, ip, router_display=""):
+    """Traite la vente en arrière-plan APRÈS avoir répondu à MikroTik.
+
+    Le vendeur est déterminé par le ticket pré-généré (plus de préfixe
+    « vendeur- » dans le username). Un code inconnu tombe dans « Non
+    attribué ». L'opération est idempotente : une reconnexion ne recompte
+    pas la vente."""
+    slug = tenant["slug"]
+    result  = tickets.resolve_sale(tenant_sales_db(slug), username, profile)
+    if not result["record"]:
+        return   # ticket déjà vendu (reconnexion) — on ne recompte pas
+
+    seller  = result["seller"]
+    profile = result["profile"] or profile
+    amount  = tenant["price_map"].get(profile, 0)
 
     sale_id = record_sale(slug, seller, username, profile, amount, "", ip)
     if tenant.get("bot_token") and tenant.get("chat_id"):
@@ -541,7 +608,7 @@ def hub_health():
 
 @app.route("/reload", methods=["POST"])
 def hub_reload():
-    if HUB_KEY and request.args.get("key", "") != HUB_KEY:
+    if HUB_KEY and not _hub_key_ok():
         return jsonify({"error": "unauthorized"}), 403
     registry.refresh()
     return jsonify({"status": "ok", "tenants": len(registry.all())})
@@ -573,29 +640,52 @@ def tenant_login(slug):
     if err:
         return err
 
+    if slug_rate_limited(slug):
+        print(f"[SECURITY] {slug}: rate limit dépassé — requête ignorée", flush=True)
+        return jsonify({"status": "ok"})
+
     data      = request.form if request.method == "POST" else request.args
     username  = data.get("username", "").strip()
     profile   = data.get("profile", "").strip()
     token     = data.get("token", "").strip()
     identity  = data.get("router", "").strip()
+    serial    = data.get("serial", "").strip()
     client_ip = request.headers.get("X-Real-IP") or request.remote_addr or ""
+    # Empreinte STABLE de l'appareil : numéro de série matériel si disponible,
+    # sinon le hostname. C'est elle qui sert à détecter le partage (l'IP change
+    # sur les réseaux mobiles et provoquait de fausses alertes).
+    device_id = serial or identity
 
-    if not username or not profile:
-        return jsonify({"error": "username et profile requis"}), 400
+    # Seul le username est requis : le profil (et son prix) est retrouvé
+    # dans la base à partir du ticket pré-généré. Le script On Login n'envoie
+    # d'ailleurs pas de profil ; celui rapporté ne sert que de repli pour un
+    # code inconnu.
+    if not username:
+        return jsonify({"error": "username requis"}), 400
 
     # Token obligatoire dès qu'il est configuré (toujours le cas pour
-    # les tenants créés depuis la v2)
-    if tenant.get("router_token") and token != tenant["router_token"]:
+    # les tenants créés depuis la v2). Comparaison a temps constant pour ne
+    # pas exposer le token via une attaque temporelle. Un tenant SANS token
+    # (config legacy) est accepté mais journalise une alerte : à corriger.
+    router_token = tenant.get("router_token") or ""
+    if router_token:
+        token_ok = bool(token) and secrets.compare_digest(token, router_token)
+    else:
+        token_ok = True
+        print(f"[SECURITY] {slug}: aucun router_token configuré — vente acceptée "
+              f"sans authentification. Régénérez le script pour ce tenant.", flush=True)
+
+    # Journal d'accès : IP publique + empreinte appareil (détection de partage).
+    access_log.record(slug, client_ip, identity, token_ok, device_id=device_id)
+
+    if not token_ok:
         print(f"[SECURITY] {slug}: token invalide depuis {client_ip} — ignoré", flush=True)
         return jsonify({"status": "ok"})
 
     router_display = identity or tenant.get("router_name") or ""
 
-    threading.Thread(
-        target=process_sale,
-        args=(tenant, username, profile, client_ip, router_display),
-        daemon=True
-    ).start()
+    _sale_executor.submit(process_sale, tenant, username, profile,
+                          client_ip, router_display)
 
     return jsonify({"status": "ok"})
 
@@ -605,8 +695,9 @@ def tenant_stats(slug):
     tenant, err = _resolve_tenant(slug)
     if err:
         return err
-    # Endpoint interne (web app) — protégé par HUB_KEY
-    if HUB_KEY and request.args.get("key", "") != HUB_KEY:
+    # Endpoint interne (web app) : HUB_KEY exigée. Sans clé configurée,
+    # on refuse tout — ces stats sont le chiffre d'affaires du client.
+    if not _hub_key_ok():
         return jsonify({"error": "unauthorized"}), 403
     ts = get_today_stats(slug)
     return jsonify({"date": datetime.now().strftime("%Y-%m-%d"), "sellers": ts,
@@ -619,7 +710,7 @@ def tenant_stats_week(slug):
     tenant, err = _resolve_tenant(slug)
     if err:
         return err
-    if HUB_KEY and request.args.get("key", "") != HUB_KEY:
+    if not _hub_key_ok():
         return jsonify({"error": "unauthorized"}), 403
     return jsonify({"days": get_week_stats(slug)})
 

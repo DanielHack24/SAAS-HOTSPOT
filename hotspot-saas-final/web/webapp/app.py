@@ -26,9 +26,11 @@ from security import validate_csrf, csrf_field, csrf_token
 # ── Routes (l'import suffit : chaque module s'enregistre sur `app`) ──
 import routes_auth     # noqa: F401, E402
 import routes_client   # noqa: F401, E402
+import routes_sellers  # noqa: F401, E402
 import routes_billing  # noqa: F401, E402
 import routes_admin    # noqa: F401, E402
 import routes_api      # noqa: F401, E402
+import routes_support  # noqa: F401, E402
 
 
 # ═══════════════════════════════════════════════
@@ -37,7 +39,38 @@ import routes_api      # noqa: F401, E402
 
 @app.route("/")
 def index():
-    return render_template("landing.html", plans=config.PLANS)
+    # Modèle 3D rotatif du routeur : affiché si static/3d/router.glb existe,
+    # sinon la landing retombe sur l'image PNG animée.
+    import os
+    glb = os.path.join(app.static_folder or "static", "3d", "router.glb")
+    return render_template("landing.html", plans=config.PLANS,
+                           has_router_3d=os.path.exists(glb),
+                           support_bot_username=config.support_bot_username())
+
+
+@app.route("/legal/<slug>")
+def legal_page(slug):
+    import legal_content
+    page = legal_content.PAGES.get(slug)
+    if not page:
+        return render_template("404.html"), 404
+    return render_template("legal.html", page=page,
+                           updated=legal_content.UPDATED,
+                           contact=legal_content.CONTACT_EMAIL)
+
+
+@app.route("/healthz")
+def healthz():
+    """Sonde de supervision (watchdog, UptimeRobot) : vérifie que
+    l'application répond ET que la base est accessible."""
+    from db import get_db
+    try:
+        conn = get_db()
+        conn.execute("SELECT 1")
+        conn.close()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}, 500
 
 
 @app.errorhandler(404)

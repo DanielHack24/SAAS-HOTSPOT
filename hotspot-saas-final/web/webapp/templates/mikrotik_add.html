@@ -4,98 +4,92 @@
 
 {% block extra_head %}
 <style>
-.add-wrap { max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.1rem; }
+.add-wrap{max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem}
 
-.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: .65rem; margin: .6rem 0 1rem; }
-.plan-tile {
-  background: #fff; border: 2px solid var(--border); border-radius: 11px;
-  padding: .9rem .75rem; text-align: center; cursor: pointer;
-  transition: border-color .18s, transform .18s, box-shadow .18s;
-  position: relative;
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.6rem;margin:.6rem 0 1rem}
+.plan-tile{
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:.85rem .7rem;text-align:center;cursor:pointer;position:relative;
 }
-.plan-tile:hover { border-color: rgba(255,77,28,.4); transform: translateY(-2px); }
-.plan-tile.selected {
-  border-color: var(--accent); background: rgba(255,77,28,.04);
-  box-shadow: 0 0 0 3px rgba(255,77,28,.12);
+.plan-tile.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(194,65,12,.1)}
+.glide-wrap.hovered .plan-tile.selected.glide-on{box-shadow:none}
+.plan-tile .pt-badge{
+  position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:.54rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;padding:.13rem .45rem;
+  border-radius:4px;white-space:nowrap;
 }
-.plan-tile .pt-badge {
-  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
-  background: var(--gold); color: var(--ink); font-size: .58rem; font-weight: 700;
-  letter-spacing: .07em; text-transform: uppercase; padding: .12rem .45rem;
-  border-radius: 100px; white-space: nowrap;
-}
-.plan-tile .pt-duration { font-size: .72rem; color: var(--dim); margin-bottom: .25rem; }
-.plan-tile .pt-price { font-family: var(--fh); font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; }
-.plan-tile .pt-check { position: absolute; top: .45rem; right: .55rem; font-size: .85rem; display: none; }
-.plan-tile.selected .pt-check { display: block; }
+.plan-tile .pt-duration{font-size:.7rem;color:var(--muted);margin-bottom:.25rem}
+.plan-tile .pt-price{font-family:var(--fh);font-size:1.05rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.plan-tile .pt-check{position:absolute;top:.45rem;right:.55rem;display:none;color:var(--accent)}
+.plan-tile.selected .pt-check{display:block}
 
-.price-highlight {
-  background: linear-gradient(135deg,#0f1535,#1a2a6c); color: #fff; border-radius: 14px;
-  padding: 1.4rem 1.6rem; display: flex; align-items: center; gap: 1rem;
+.price-highlight{
+  background:var(--navy);color:#fff;border-radius:11px;
+  padding:1.3rem 1.5rem;display:flex;align-items:center;gap:1rem;
 }
-.price-big { font-family: var(--fh); font-size: 2.2rem; font-weight: 700; letter-spacing: -.03em; }
-.price-label { font-size: .78rem; opacity: .55; margin-bottom: .15rem; }
-.price-note { font-size: .78rem; opacity: .45; margin-top: .1rem; }
+.price-big{font-family:var(--fh);font-size:1.9rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.price-label{font-size:.72rem;opacity:.55;margin-bottom:.15rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.price-note{font-size:.75rem;opacity:.5;margin-top:.1rem}
 
-.pay-btn {
-  width: 100%; padding: .85rem; border: none; border-radius: 11px; cursor: pointer;
-  font-family: var(--fb); font-size: 1rem; font-weight: 800;
-  background: linear-gradient(135deg, #ff4d1c, #ff7043);
-  color: #fff; box-shadow: 0 4px 20px rgba(255,77,28,.35);
-  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: .6rem;
+.pay-btn{
+  width:100%;padding:.85rem;border:none;border-radius:9px;cursor:pointer;
+  font-family:var(--fb);font-size:.95rem;font-weight:600;
+  background:var(--accent);color:#fff;
+  transition:background .15s;display:flex;align-items:center;justify-content:center;gap:.6rem;
 }
-.pay-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,77,28,.45); }
-.pay-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.pay-btn:hover{background:var(--accent-h)}
+.pay-btn:disabled{opacity:.55;cursor:not-allowed}
 
-.input-wrap { position: relative; }
-.input-wrap .form-input { padding-right: 2.8rem; }
-.input-status { position: absolute; right: .8rem; top: 50%; transform: translateY(-50%); font-size: 1rem; opacity: 0; transition: opacity .2s; }
-.input-status.show { opacity: 1; }
+.input-wrap{position:relative}
+.input-wrap .form-input{padding-right:2.6rem}
+.input-status{position:absolute;right:.8rem;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s;display:flex}
+.input-status.show{opacity:1}
+.input-status.ok{color:var(--green)}
+.input-status.err{color:var(--red)}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="add-wrap">
 
-  <!-- Prix highlight -->
   <div class="price-highlight">
-    <div style="font-size:2rem">📡</div>
+    <div style="width:40px;height:40px;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8874C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+    </div>
     <div style="flex:1">
       <div class="price-label">Routeur supplémentaire</div>
       <div class="price-big" id="price_display">{{ "{:,}".format(plans['1m'].price).replace(",", " ") }} FCFA</div>
       <div class="price-note" id="price_note">1 mois · paiement via FedaPay</div>
     </div>
-    <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:.4rem .8rem;font-size:.72rem;color:rgba(255,255,255,.7);font-weight:600">
-      🔒 Sécurisé
-    </div>
   </div>
 
-  <!-- Info -->
   <div class="alert alert-info">
-    ℹ️ <div style="font-size:.84rem;line-height:1.55">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div style="font-size:.83rem;line-height:1.55">
       Chaque routeur supplémentaire fonctionne avec le <strong>même bot Telegram</strong> et le <strong>même abonnement</strong>.
       Paiement instantané via <strong>FedaPay</strong> — T-Money, Flooz, Wave, MTN, Orange et plus.
     </div>
   </div>
 
-  <!-- Formulaire -->
   <div class="card">
     <form method="POST" id="addForm" action="{{ url_for('mikrotik_add') }}">
       {{ csrf_field() }}
 
-      <!-- Sélection durée -->
       <div class="form-group">
-        <label class="form-label">⏱️ Durée de l'abonnement pour ce routeur</label>
-        <div class="plan-grid" id="plan_grid">
+        <label class="form-label">Durée de l'abonnement pour ce routeur</label>
+        <div class="plan-grid glide-wrap" data-glide-radius="9px" id="plan_grid">
           {% for key, p in plans.items() %}
-          <div class="plan-tile {% if key == '1m' %}selected{% endif %}"
+          <div class="plan-tile glide-item {% if key == '1m' %}selected{% endif %}"
                onclick="selectPlan('{{ key }}', {{ p.price }}, {{ p.label | tojson }})"
                id="plan_{{ key }}">
-            {% if key == '12m' %}<div class="pt-badge">⭐ Meilleur prix</div>{% endif %}
-            {% if key == '3m' %}<div class="pt-badge" style="background:rgba(255,77,28,.15);color:var(--accent)">Populaire</div>{% endif %}
-            <div class="pt-check">✅</div>
+            {% if key == '12m' %}<div class="pt-badge" style="background:var(--green)">Meilleur prix</div>{% endif %}
+            {% if key == '3m' %}<div class="pt-badge">Populaire</div>{% endif %}
+            <div class="pt-check">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
             <div class="pt-duration">{{ p.label }}</div>
-            <div class="pt-price">{{ "{:,}".format(p.price).replace(",", "\u202f")|safe }}<span style="font-size:.65rem;font-weight:400;opacity:.6"> FCFA</span></div>
+            <div class="pt-price">{{ "{:,}".format(p.price).replace(",", " ")|safe }}<span style="font-size:.62rem;font-weight:400;opacity:.6;font-family:var(--fb)"> FCFA</span></div>
           </div>
           {% endfor %}
         </div>
@@ -103,24 +97,21 @@
       </div>
 
       <hr class="divider">
-      <div class="card-title" style="margin-bottom:.75rem">🌐 Informations du routeur</div>
+      <div class="card-title" style="margin-bottom:.75rem">Informations du routeur</div>
 
-      <!-- Nom du routeur -->
       <div class="form-group">
-        <label class="form-label">Nom du routeur <span style="font-weight:400;color:var(--dim)">(optionnel)</span></label>
+        <label class="form-label">Nom du routeur <span style="font-weight:400;color:var(--muted)">(optionnel)</span></label>
         <input class="form-input" type="text" name="label"
                placeholder="Ex : Boutique Centre, Cyber Café Kodjoviakopé…"
                maxlength="60">
-        <div class="form-hint">Pour vous aider à identifier ce routeur dans votre dashboard.</div>
+        <div class="form-hint">Pour vous aider à identifier ce routeur dans votre tableau de bord.</div>
       </div>
 
-      <!-- IP MikroTik -->
       <div class="form-group">
         <label class="form-label">IP publique du MikroTik</label>
         <div class="input-wrap">
-          <input class="form-input" type="text" name="mikrotik_ip" id="ip_input"
+          <input class="form-input mono" type="text" name="mikrotik_ip" id="ip_input"
                  placeholder="Ex : 41.82.115.200" required
-                 style="font-family:monospace;font-size:.85rem"
                  oninput="validateIp(this.value)">
           <span class="input-status" id="ip_status"></span>
         </div>
@@ -129,43 +120,43 @@
 
       <hr class="divider">
 
-      <!-- Récap paiement -->
-      <div class="card-title" style="margin-bottom:.75rem">💳 Récapitulatif</div>
-      <div style="background:#f8f9ff;border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.1rem;display:flex;justify-content:space-between;align-items:center">
+      <div class="card-title" style="margin-bottom:.75rem">Récapitulatif</div>
+      <div style="background:var(--bg);border-radius:9px;padding:1rem 1.2rem;margin-bottom:1.1rem;display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="color:var(--dim);font-size:.75rem;margin-bottom:.2rem">Plan sélectionné</div>
-          <div style="font-weight:700;color:var(--ink)" id="recap_duration">1 mois</div>
+          <div style="color:var(--muted);font-size:.72rem;margin-bottom:.2rem">Plan sélectionné</div>
+          <div style="font-weight:600;color:var(--ink)" id="recap_duration">1 mois</div>
         </div>
         <div style="text-align:right">
-          <div style="color:var(--dim);font-size:.75rem;margin-bottom:.2rem">Montant</div>
-          <div style="font-family:var(--fh);font-size:1.5rem;font-weight:800;color:var(--accent)" id="recap_price">2 000 FCFA</div>
+          <div style="color:var(--muted);font-size:.72rem;margin-bottom:.2rem">Montant</div>
+          <div style="font-family:var(--fh);font-size:1.4rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums" id="recap_price">2 000 FCFA</div>
         </div>
       </div>
 
-      <!-- Bouton payer FedaPay -->
       <button type="submit" class="pay-btn" id="submit_btn" disabled>
-        <span>🔐</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <span id="pay_btn_text">Payer 2 000 FCFA avec FedaPay</span>
       </button>
 
-      <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.7rem">
-        <div style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--dim)">🔒 SSL chiffré</div>
-        <div style="font-size:.72rem;color:var(--dim)">·</div>
-        <div style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--dim)">⚡ Activation instantanée</div>
-        <div style="font-size:.72rem;color:var(--dim)">·</div>
-        <div style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--dim)">🌍 UEMOA</div>
+      <div style="display:flex;gap:.9rem;justify-content:center;flex-wrap:wrap;margin-top:.8rem">
+        <span style="font-size:.71rem;color:var(--muted)">SSL chiffré</span>
+        <span style="font-size:.71rem;color:var(--muted)">·</span>
+        <span style="font-size:.71rem;color:var(--muted)">Activation instantanée</span>
+        <span style="font-size:.71rem;color:var(--muted)">·</span>
+        <span style="font-size:.71rem;color:var(--muted)">UEMOA</span>
       </div>
 
     </form>
   </div>
 
-  <!-- Note remboursement -->
-  <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:.85rem 1rem;font-size:.82rem;color:#991b1b;line-height:1.55">
-    ⚠️ <strong>Important :</strong> En cas de suppression d'un routeur après paiement, <strong>aucun remboursement ne sera effectué</strong>. Le service sera simplement désactivé.
+  <div class="alert alert-danger" style="margin-bottom:0">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div style="font-size:.82rem;line-height:1.55">
+      <strong>Important :</strong> en cas de suppression d'un routeur après paiement, <strong>aucun remboursement ne sera effectué</strong>. Le service sera simplement désactivé.
+    </div>
   </div>
 
-  <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="text-align:center;justify-content:center">
-    ← Retour au dashboard
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="justify-content:center">
+    Retour au tableau de bord
   </a>
 
 </div>
@@ -182,6 +173,9 @@ const PLANS = {
 let selectedPlan = '1m'
 let ipValid = false
 
+const ICON_OK  = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+const ICON_ERR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+
 function selectPlan(key, price, label) {
   selectedPlan = key
   document.getElementById('plan_input').value = key
@@ -190,7 +184,7 @@ function selectPlan(key, price, label) {
     document.getElementById('plan_' + k).classList.toggle('selected', k === key)
   })
 
-  const fmt = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')
+  const fmt = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
   document.getElementById('price_display').textContent = fmt(price) + ' FCFA'
   document.getElementById('price_note').textContent = label + ' · paiement via FedaPay'
   document.getElementById('recap_price').textContent = fmt(price) + ' FCFA'
@@ -203,8 +197,8 @@ function validateIp(val) {
   const v = val.trim()
   const ok = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(v) && v.split('.').every(n => parseInt(n) <= 255)
   const icon = document.getElementById('ip_status')
-  icon.textContent = v ? (ok ? '✅' : '❌') : ''
-  icon.classList.toggle('show', !!v)
+  icon.innerHTML = v ? (ok ? ICON_OK : ICON_ERR) : ''
+  icon.className = 'input-status' + (v ? ' show ' + (ok ? 'ok' : 'err') : '')
   ipValid = ok
   checkSubmit()
 }
@@ -213,11 +207,10 @@ function checkSubmit() {
   document.getElementById('submit_btn').disabled = !ipValid
 }
 
-// Loader sur submit
 document.getElementById('addForm').addEventListener('submit', function() {
   const btn = document.getElementById('submit_btn')
   btn.disabled = true
-  btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></span> Redirection en cours…'
+  btn.innerHTML = '<span style="display:inline-block;width:15px;height:15px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></span> Redirection en cours…'
 })
 </script>
 <style>@keyframes spin { to { transform: rotate(360deg); } }</style>

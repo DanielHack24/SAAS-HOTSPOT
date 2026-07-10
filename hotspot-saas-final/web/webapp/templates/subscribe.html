@@ -5,159 +5,165 @@
 
 {% block extra_head %}
 <style>
-.plan-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: .8rem; }
-.plan-tile {
-  border: 2px solid var(--border); background: #fff; border-radius: 12px;
-  padding: 1.1rem; cursor: pointer; position: relative;
-  transition: all .18s; user-select: none;
+.sub-wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:1.6rem}
+
+/* En-tête sobre */
+.sub-head{text-align:center;max-width:640px;margin:0 auto}
+.sub-head h1{font-family:var(--fh);font-size:1.7rem;font-weight:700;letter-spacing:-.02em;color:var(--ink);margin:0 0 .5rem}
+.sub-head p{font-size:.92rem;color:var(--muted);line-height:1.6;margin:0}
+
+/* Cartes de prix */
+.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.1rem;align-items:stretch}
+.price-card{position:relative;isolation:isolate;display:flex;flex-direction:column;background:var(--surface);
+  border:2px solid var(--border);border-radius:16px;padding:1.7rem 1.45rem 1.5rem;
+  box-shadow:0 10px 30px rgba(18,38,58,.05);
+  transition:transform .28s cubic-bezier(.22,1,.36,1),box-shadow .28s ease,border-color .28s ease}
+/* Remplissage orange qui monte depuis le bas au survol (sous le contenu) */
+.price-card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:0;z-index:-1;
+  background:linear-gradient(to top,rgba(194,65,12,.16),rgba(194,65,12,.04) 60%,transparent);
+  border-radius:0 0 14px 14px;pointer-events:none;
+  transition:height .45s cubic-bezier(.22,1,.36,1)}
+.price-card:hover{transform:translateY(-6px);box-shadow:0 22px 44px -18px rgba(18,38,58,.22);border-color:var(--accent)}
+.price-card:hover::after{height:60%}
+.price-card.popular{border-color:var(--accent)}
+/* Quand une autre carte est survolée, la bordure orange de la Populaire s'éteint */
+.price-grid:hover .price-card.popular:not(:hover){border-color:var(--border)}
+@media(prefers-reduced-motion:reduce){.price-card::after{transition:none}}
+@media(min-width:920px){
+  .price-card.popular{transform:scale(1.04)}
+  .price-card.popular:hover{transform:scale(1.04) translateY(-6px)}
 }
-.plan-tile:hover { border-color: rgba(255,77,28,.4); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(10,10,18,.08); }
-.plan-tile.selected { border-color: var(--accent); background: rgba(255,77,28,.03); box-shadow: 0 0 0 3px rgba(255,77,28,.1); }
-.plan-tile .pop-badge {
-  position: absolute; top: -10px; left: 12px;
-  background: var(--gold); color: var(--ink); font-size: .6rem; font-weight: 700;
-  letter-spacing: .07em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 100px;
-}
-.plan-duration { font-size: .75rem; color: var(--dim); margin-bottom: .25rem; }
-.plan-price { font-family: var(--fh); font-weight: 800; font-size: 1.25rem; letter-spacing: -.03em; }
-.plan-check { position: absolute; top: .6rem; right: .8rem; font-size: 1rem; display: none; }
-.plan-tile.selected .plan-check { display: block; }
+.price-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:.3rem .85rem;border-radius:20px;white-space:nowrap;box-shadow:0 4px 12px rgba(194,65,12,.32)}
+.price-badge.best{background:var(--green);box-shadow:0 4px 12px rgba(21,128,61,.3)}
+.price-name{font-family:var(--fh);font-weight:700;font-size:1.15rem;text-align:center;color:var(--ink);margin-bottom:.9rem}
+.price-amt{display:flex;align-items:baseline;justify-content:center;gap:.35rem}
+.price-amt .n{font-family:var(--fh);font-weight:800;font-size:2.1rem;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.price-amt .u{font-size:.78rem;font-weight:600;color:var(--muted)}
+.price-save{text-align:center;font-size:.75rem;color:var(--green);font-weight:600;min-height:1rem;margin:.45rem 0 1.1rem}
+.price-feat{list-style:none;margin:0 0 1.4rem;padding:0;display:flex;flex-direction:column;gap:.6rem;flex:1}
+.price-feat li{display:flex;gap:.5rem;align-items:flex-start;font-size:.82rem;color:var(--muted);line-height:1.45}
+.price-feat li svg{color:var(--accent);flex-shrink:0;margin-top:.12rem}
+.price-cta{width:100%;padding:.75rem;border-radius:10px;font-family:var(--fb);font-weight:600;font-size:.88rem;
+  cursor:pointer;text-align:center;border:2px solid var(--accent);background:transparent;color:var(--accent);transition:.15s}
+.price-cta:hover{background:var(--accent);color:#fff}
+.price-cta:disabled{opacity:.6;cursor:not-allowed}
+
+/* Réassurance */
+.sec-row{display:flex;gap:1.1rem;justify-content:center;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.sec-row .it{display:flex;align-items:center;gap:.4rem}
+.sec-row svg{color:var(--green)}
 
 /* Opérateurs */
-.operators-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px,1fr)); gap: .6rem; margin: .8rem 0; }
-.op-badge {
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-  border-radius: 8px; padding: .5rem .4rem; text-align: center;
-  font-size: .68rem; color: rgba(255,255,255,.55); font-weight: 600;
-}
-.op-flag { font-size: 1.1rem; display: block; margin-bottom: .2rem; }
+.operators-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:.5rem;margin-top:.7rem}
+.op-badge{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.7rem .4rem .55rem;text-align:center;
+  font-size:.67rem;color:var(--muted);font-weight:600;display:flex;flex-direction:column;align-items:center;gap:.45rem;cursor:default}
+.op-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--fh);font-weight:700;color:#fff;font-size:.75rem;overflow:hidden;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1);box-shadow:0 2px 6px rgba(16,24,32,.12)}
+.op-ico img{width:100%;height:100%;object-fit:contain;display:block}
+.op-badge:hover .op-ico{transform:scale(1.3)}
 
-/* Bouton payer */
-.pay-btn {
-  width: 100%; padding: .85rem; border: none; border-radius: 11px; cursor: pointer;
-  font-family: var(--fb); font-size: 1rem; font-weight: 800;
-  background: linear-gradient(135deg, #ff4d1c, #ff7043);
-  color: #fff; box-shadow: 0 4px 20px rgba(255,77,28,.35);
-  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: .6rem;
-  letter-spacing: .01em;
-}
-.pay-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,77,28,.45); }
-.pay-btn:active { transform: translateY(0); }
-
-.security-badges { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-top: .7rem; }
-.sec-badge { display: flex; align-items: center; gap: .3rem; font-size: .72rem; color: var(--dim); }
+.how-step{display:flex;gap:.8rem;align-items:flex-start}
+.how-num{font-family:var(--fm);font-size:.68rem;color:var(--accent);background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;padding:.18rem .45rem;flex-shrink:0;margin-top:.1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+<div class="sub-wrap rise">
 
-  <!-- Header FedaPay -->
-  <div style="background:linear-gradient(135deg,#0f1535,#1a2a6c);border-radius:14px;padding:1.4rem 1.6rem;display:flex;align-items:center;gap:1rem">
-    <div style="font-size:2.2rem">🌍</div>
-    <div>
-      <div style="font-family:var(--fh);font-size:1.1rem;font-weight:700;font-style:italic;color:#fff;margin-bottom:.2rem">Paiement Mobile Money</div>
-      <div style="font-size:.8rem;color:rgba(255,255,255,.45);line-height:1.5">T-Money · Flooz · MTN · Moov · Orange · Wave · Free — toute l'UEMOA</div>
-    </div>
-    <div style="margin-left:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.4rem .8rem;font-size:.72rem;color:rgba(255,255,255,.6);font-weight:600;white-space:nowrap">
-      🔒 Sécurisé
-    </div>
+  <div class="sub-head">
+    <h1>Choisissez votre abonnement</h1>
+    <p>Un abonnement = un routeur connecté en permanence. Paiement Mobile Money sécurisé via FedaPay, activation instantanée.</p>
   </div>
 
-  <!-- Sélection plan -->
-  <div class="card">
-    <div class="card-title">📦 Choisissez votre plan</div>
-    <div class="plan-grid" id="planGrid">
-      {% for key, pl in plans.items() %}
-      <div class="plan-tile {% if key==plan %}selected{% endif %}"
-           data-plan="{{ key }}" data-price="{{ pl.price }}" data-label="{{ pl.label }}"
-           onclick="pickPlan(this)">
-        {% if key=='3m' %}<div class="pop-badge">⭐ Populaire</div>{% endif %}
-        {% if key=='12m' %}<div class="pop-badge" style="background:rgba(34,197,94,.2);color:#15803d">💎 Meilleur prix</div>{% endif %}
-        <div class="plan-check">✅</div>
-        <div class="plan-duration">{{ pl.label }}</div>
-        <div class="plan-price">
-          {{ "{:,}".format(pl.price).replace(",","&thinsp;")|safe }}
-          <span style="font-size:.72rem;font-weight:400;opacity:.5;font-family:var(--fb)"> FCFA</span>
+  <!-- Cartes de prix -->
+  {% set ns = namespace(base=0) %}
+  {% for k, pl in plans.items() %}{% if pl.months == 1 %}{% set ns.base = pl.price %}{% endif %}{% endfor %}
+  {% set check %}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% endset %}
+  {% set cross %}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{% endset %}
+  <div class="price-grid">
+    {% for key, pl in plans.items() %}
+    {% set save = (pl.months * ns.base - pl.price) if ns.base else 0 %}
+    <div class="price-card {% if key=='3m' %}popular{% endif %}">
+      {% if key=='3m' %}<div class="price-badge">Populaire</div>{% endif %}
+      {% if key=='12m' %}<div class="price-badge best">Meilleur prix</div>{% endif %}
+      <div class="price-name">{{ pl.label }}</div>
+      <div class="price-amt">
+        <span class="n">{{ "{:,}".format(pl.price).replace(",","&thinsp;")|safe }}</span>
+        <span class="u">FCFA</span>
+      </div>
+      <div class="price-save">{% if save > 0 %}Économisez {{ "{:,}".format(save).replace(","," ") }} F{% endif %}</div>
+      <ul class="price-feat">
+        <li>{{ check|safe }}<strong>{{ pl.max_tickets }}</strong>&nbsp;tickets par génération</li>
+        <li>{{ check|safe }}<strong>{{ pl.max_sellers }}</strong>&nbsp;vendeurs</li>
+        <li>{{ check|safe }}Notifications de vente Telegram</li>
+        <li>{{ check|safe }}Connexion sécurisée + tickets auto</li>
+        <li{% if not pl.vpn %} style="opacity:.55"{% endif %}>{% if pl.vpn %}{{ check|safe }}<strong>VPN d'accès à votre routeur{% if pl.max_vpn_devices and pl.max_vpn_devices > 1 %} ({{ pl.max_vpn_devices }} appareils){% endif %}</strong>{% else %}{{ cross|safe }}VPN d'accès à votre routeur{% endif %}</li>
+      </ul>
+      <form method="POST" action="{{ url_for('subscribe_checkout') }}" class="checkout-form">
+        {{ csrf_field() }}
+        <input type="hidden" name="plan" value="{{ key }}">
+        <button type="submit" class="price-cta">Choisir ce plan</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="sec-row">
+    <span class="it"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Paiement SSL chiffré</span>
+    <span class="it"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Activation instantanée</span>
+    <span class="it"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Toute l'UEMOA</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.1rem">
+
+    <!-- Opérateurs -->
+    <div class="card">
+      <div style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em">Opérateurs acceptés</div>
+      <div class="operators-grid">
+        <div class="op-badge"><span class="op-ico"><img src="{{ url_for('static', filename='img/tmoney.ico') }}" alt="T-Money"></span>T-Money</div>
+        <div class="op-badge"><span class="op-ico"><img src="{{ url_for('static', filename='img/flooz.ico') }}" alt="Flooz"></span>Flooz</div>
+        <div class="op-badge"><span class="op-ico"><img src="{{ url_for('static', filename='img/moov-money.ico') }}" alt="Moov Money"></span>Moov Money</div>
+        <div class="op-badge"><span class="op-ico"><img src="{{ url_for('static', filename='img/orange-money.ico') }}" alt="Orange Money"></span>Orange Money</div>
+        <div class="op-badge"><span class="op-ico"><img src="{{ url_for('static', filename='img/wave.ico') }}" alt="Wave"></span>Wave</div>
+        <div class="op-badge"><span class="op-ico" style="background:#FFCC00;color:#131720">MTN</span>MTN MoMo</div>
+        <div class="op-badge">
+          <span class="op-ico" style="background:var(--navy)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </span>Carte bancaire
         </div>
       </div>
-      {% endfor %}
     </div>
-  </div>
 
-  <!-- Opérateurs disponibles -->
-  <div class="card" style="background:linear-gradient(135deg,#0f1535,#162048);border-color:transparent">
-    <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem">Opérateurs acceptés</div>
-    <div class="operators-grid">
-      <div class="op-badge"><span class="op-flag">🇹🇬</span>T-Money</div>
-      <div class="op-badge"><span class="op-flag">🇹🇬</span>Flooz</div>
-      <div class="op-badge"><span class="op-flag">🇧🇯</span>MTN</div>
-      <div class="op-badge"><span class="op-flag">🇧🇯</span>Moov</div>
-      <div class="op-badge"><span class="op-flag">🇨🇮</span>Orange</div>
-      <div class="op-badge"><span class="op-flag">🇸🇳</span>Wave</div>
-      <div class="op-badge"><span class="op-flag">🇸🇳</span>Free</div>
-      <div class="op-badge"><span class="op-flag">💳</span>Carte</div>
-    </div>
-  </div>
-
-  <!-- Récap + bouton payer -->
-  <div class="card">
-    <div class="card-title">💳 Récapitulatif</div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:#f8f9ff;border-radius:10px;margin-bottom:1.1rem">
-      <div>
-        <div style="font-size:.75rem;color:var(--dim);margin-bottom:.2rem">Plan sélectionné</div>
-        <div style="font-weight:700;color:var(--ink)" id="recap-label">{{ p.label }}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:.75rem;color:var(--dim);margin-bottom:.2rem">Montant</div>
-        <div style="font-family:var(--fh);font-size:1.5rem;font-weight:800;color:var(--accent)" id="recap-price">
-          {{ "{:,}".format(p.price).replace(",","&thinsp;")|safe }} FCFA
+    <!-- Comment ça marche -->
+    <div class="card">
+      <div class="card-title">Comment ça marche</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem">
+        {% for num, title, desc in [
+          ('01', 'Choisissez votre plan', 'Sélectionnez la durée qui vous convient.'),
+          ('02', 'Redirection vers FedaPay', 'Page de paiement sécurisée FedaPay.'),
+          ('03', 'Payez par Mobile Money', 'Choisissez votre opérateur, payez depuis votre téléphone.'),
+          ('04', 'Activation instantanée', 'Abonnement activé automatiquement dès confirmation.')
+        ] %}
+        <div class="how-step">
+          <div class="how-num">{{ num }}</div>
+          <div>
+            <div style="font-size:.84rem;font-weight:600;margin-bottom:.1rem">{{ title }}</div>
+            <div style="font-size:.78rem;color:var(--muted);line-height:1.5">{{ desc }}</div>
+          </div>
         </div>
+        {% endfor %}
       </div>
     </div>
 
-    <form method="POST" action="{{ url_for('subscribe_checkout') }}" id="checkoutForm">
-      {{ csrf_field() }}
-      <input type="hidden" name="plan" id="planInput" value="{{ plan }}">
-      <button type="submit" class="pay-btn" id="payBtn">
-        <span>🔐</span>
-        <span id="payBtnText">Payer {{ "{:,}".format(p.price).replace(","," ") }} FCFA avec FedaPay</span>
-      </button>
-    </form>
-
-    <div class="security-badges">
-      <div class="sec-badge">🔒 SSL chiffré</div>
-      <div class="sec-badge">·</div>
-      <div class="sec-badge">⚡ Activation instantanée</div>
-      <div class="sec-badge">·</div>
-      <div class="sec-badge">🌍 UEMOA</div>
-    </div>
-
-    <div style="text-align:center;margin-top:.8rem">
-      <a href="{{ url_for('dashboard') }}" style="font-size:.78rem;color:var(--dim);text-decoration:none">← Retour au dashboard</a>
-    </div>
   </div>
 
-  <!-- Comment ça marche -->
-  <div class="card">
-    <div class="card-title">❓ Comment ça marche ?</div>
-    <div style="display:flex;flex-direction:column;gap:.7rem">
-      {% for icon, title, desc in [
-        ('1️⃣', 'Choisissez votre plan', 'Sélectionnez la durée qui vous convient.'),
-        ('2️⃣', 'Redirigé vers FedaPay', 'Vous êtes redirigé sur la page de paiement sécurisée FedaPay.'),
-        ('3️⃣', 'Payez par Mobile Money', 'Choisissez votre opérateur et payez depuis votre téléphone.'),
-        ('✅', 'Activation instantanée', 'Votre abonnement est activé automatiquement dès confirmation.')
-      ] %}
-      <div style="display:flex;gap:.8rem;align-items:flex-start">
-        <div style="font-size:1.2rem;flex-shrink:0;margin-top:.05rem">{{ icon }}</div>
-        <div>
-          <div style="font-size:.85rem;font-weight:700;margin-bottom:.1rem">{{ title }}</div>
-          <div style="font-size:.78rem;color:var(--dim);line-height:1.5">{{ desc }}</div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" style="font-size:.8rem;color:var(--muted);text-decoration:none">Retour au tableau de bord</a>
   </div>
 
 </div>
@@ -165,29 +171,12 @@
 
 {% block extra_js %}
 <script>
-const prices = { {% for k,p in plans.items() %}"{{k}}":{{p.price}},{% endfor %} }
-const labels = { {% for k,p in plans.items() %}"{{k}}":{{ p.label | tojson }},{% endfor %} }
-
-function pickPlan(el) {
-  document.querySelectorAll('.plan-tile').forEach(t => t.classList.remove('selected'))
-  el.classList.add('selected')
-  const plan  = el.dataset.plan
-  const price = parseInt(el.dataset.price)
-  const label = el.dataset.label
-  document.getElementById('planInput').value = plan
-  document.getElementById('recap-label').textContent = label
-  document.getElementById('recap-price').textContent = price.toLocaleString('fr-FR').replace(/\s/g,'\u202f') + ' FCFA'
-  document.getElementById('payBtnText').textContent = `Payer ${price.toLocaleString('fr-FR').replace(/\s/g,'\u202f')} FCFA avec FedaPay`
-}
-
-// Loader sur le bouton payer
-document.getElementById('checkoutForm').addEventListener('submit', function() {
-  const btn = document.getElementById('payBtn')
-  btn.disabled = true
-  btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></span> Redirection en cours…'
+document.querySelectorAll('.checkout-form').forEach(function(f){
+  f.addEventListener('submit', function(){
+    const btn = f.querySelector('.price-cta')
+    if(btn){ btn.disabled = true
+      btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px"></span> Redirection…' }
+  })
 })
 </script>
-<style>
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
 {% endblock %}

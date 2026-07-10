@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ client.full_name }} — Admin — HotspotPro{% endblock %}
+{% block topbar_title %}Fiche opérateur{% endblock %}
+{% block topbar_subtitle %}{{ client.full_name }} · {{ client.email }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.ac-wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1rem;font-size:.85rem}
+.kv .k{color:var(--muted);white-space:nowrap}
+.kv .v{color:var(--ink);font-weight:500;word-break:break-word}
+.kv .v.mono{font-family:var(--fm);font-size:.8rem}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.35rem}
+.dot.on{background:var(--green)} .dot.off{background:var(--faint)}
+.pill{font-size:.68rem;font-weight:600;padding:.12rem .5rem;border-radius:5px}
+.pill.g{background:#EDF7F0;color:#15803D}.pill.r{background:#FDF0EF;color:#B91C1C}.pill.y{background:#FCF5EA;color:#B45309}
+.danger-zone{border:1px solid #EFD2CF;background:#FCF3F2;border-radius:10px;padding:1rem 1.15rem}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ac-wrap">
+
+  <a href="{{ url_for('admin_dashboard') }}" style="color:var(--muted);font-size:.83rem;text-decoration:none">&lsaquo; Retour à l'admin</a>
+
+  <!-- Profil -->
+  <div class="card">
+    <div class="card-title">Profil</div>
+    <div class="kv">
+      <div class="k">Nom</div><div class="v">{{ client.full_name }}</div>
+      <div class="k">Email</div><div class="v">{{ client.email }}</div>
+      <div class="k">Téléphone</div><div class="v mono">{{ client.phone or '—' }}</div>
+      <div class="k">Inscrit le</div><div class="v mono">{{ client.created_at }}</div>
+      <div class="k">ID</div><div class="v mono">#{{ client.id }}</div>
+    </div>
+  </div>
+
+  <!-- Abonnements -->
+  <div class="card">
+    <div class="card-title">Abonnements ({{ subs|length }})</div>
+    {% if subs %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Plan</th><th>Début</th><th>Fin</th><th>État</th><th>Déployé</th><th>Slug</th><th>IP MikroTik</th></tr></thead>
+        <tbody>
+        {% for s in subs %}
+          <tr>
+            <td><strong>{{ plans[s.plan].label if s.plan in plans else s.plan }}</strong></td>
+            <td class="mono" style="font-size:.78rem">{{ s.start_date[:10] if s.start_date else '—' }}</td>
+            <td class="mono" style="font-size:.78rem">{{ s.end_date[:10] if s.end_date else '—' }}</td>
+            <td>{% if s.active %}<span class="pill g">Actif</span>{% else %}<span class="pill r">Inactif</span>{% endif %}</td>
+            <td>{% if s.provisioned %}<span class="pill g">Oui</span>{% else %}<span class="pill y">Non</span>{% endif %}</td>
+            <td class="mono" style="font-size:.75rem">{{ s.slug or '—' }}</td>
+            <td class="mono" style="font-size:.75rem">{{ s.mikrotik_ip or '—' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="kv" style="margin-top:.9rem">
+      <div class="k">Bot Telegram</div><div class="v mono">{{ (subs[0].bot_token[:22] ~ '…') if subs[0].bot_token else '—' }}</div>
+      <div class="k">Chat ID</div><div class="v mono">{{ subs[0].chat_id or '—' }}</div>
+      <div class="k">Nom du routeur</div><div class="v">{{ subs[0].router_name or '—' }}</div>
+    </div>
+    {% else %}<p style="color:var(--muted);font-size:.85rem">Aucun abonnement.</p>{% endif %}
+  </div>
+
+  <!-- Routeurs MikroTik -->
+  <div class="card">
+    <div class="card-title">Routeurs MikroTik ({{ devices|length + (1 if subs and subs[0].mikrotik_ip else 0) }})</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Libellé</th><th>IP</th><th>Slug</th><th>État</th></tr></thead>
+        <tbody>
+          {% if subs and subs[0].mikrotik_ip %}
+          <tr><td><strong>{{ subs[0].router_name or 'Routeur principal' }}</strong></td>
+              <td class="mono" style="font-size:.78rem">{{ subs[0].mikrotik_ip }}</td>
+              <td class="mono" style="font-size:.75rem">{{ subs[0].slug or '—' }}</td>
+              <td>{% if subs[0].provisioned %}<span class="pill g">Déployé</span>{% else %}<span class="pill y">En attente</span>{% endif %}</td></tr>
+          {% endif %}
+          {% for d in devices %}
+          <tr><td>{{ d.label }}</td>
+              <td class="mono" style="font-size:.78rem">{{ d.ip }}</td>
+              <td class="mono" style="font-size:.75rem">{{ d.slug or '—' }}</td>
+              <td>{% if d.provisioned %}<span class="pill g">Déployé</span>{% else %}<span class="pill y">En attente</span>{% endif %}</td></tr>
+          {% endfor %}
+          {% if not devices and not (subs and subs[0].mikrotik_ip) %}
+          <tr><td colspan="4" style="color:var(--muted)">Aucun routeur.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Appareils VPN + services -->
+  {% for slug in slugs %}
+  <div class="card">
+    <div class="card-title">Appareils VPN &amp; services · <span class="mono" style="font-size:.8rem;color:var(--muted)">{{ slug }}</span></div>
+    {% if svc.get(slug) %}
+    <div class="kv" style="margin-bottom:.8rem">
+      <div class="k">Bot</div><div class="v">{% if svc[slug].bot == 'active' %}<span class="dot on"></span>Actif{% else %}<span class="dot off"></span>{{ svc[slug].bot or 'inconnu' }}{% endif %}</div>
+      <div class="k">API / réception</div><div class="v">{% if svc[slug].api == 'active' %}<span class="dot on"></span>En ligne{% else %}<span class="dot off"></span>{{ svc[slug].api or 'inconnu' }}{% endif %}</div>
+    </div>
+    {% endif %}
+    {% set vds = vpn_devices.get(slug) or [] %}
+    {% if vds %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Appareil</th><th>IP tunnel</th><th>Connexion</th><th>Créé le</th></tr></thead>
+        <tbody>
+        {% for d in vds %}
+          <tr><td>{{ d.label or ('Appareil ' ~ d.id) }}</td>
+              <td class="mono" style="font-size:.78rem">{{ d.tunnel_ip }}</td>
+              <td>{% if d.online %}<span class="dot on"></span>Connecté{% else %}<span class="dot off"></span>Hors ligne{% endif %}</td>
+              <td class="mono" style="font-size:.75rem">{{ d.created_at[:16] if d.created_at else '—' }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p style="color:var(--muted);font-size:.83rem">Aucun appareil VPN.</p>{% endif %}
+
+    <!-- Terminaux vus (journal d'accès) -->
+    {% set ts = terminals.get(slug) or [] %}
+    <div style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:1rem 0 .5rem">Terminaux / IP vus</div>
+    {% if ts %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>IP source</th><th>Routeur</th><th>Canal</th><th>Hits</th><th>Token KO</th><th>Vu le</th></tr></thead>
+        <tbody>
+        {% for t in ts %}
+          <tr><td class="mono" style="font-size:.78rem">{{ t.source_ip }}</td>
+              <td style="font-size:.8rem">{{ t.router_id or '—' }}</td>
+              <td class="mono" style="font-size:.75rem">{{ t.last_via }}</td>
+              <td class="mono">{{ t.hits }}</td>
+              <td class="mono" style="color:{% if t.bad_token %}var(--red){% else %}var(--muted){% endif %}">{{ t.bad_token }}</td>
+              <td class="mono" style="font-size:.72rem;color:var(--muted)">{{ t.last_seen }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p style="color:var(--muted);font-size:.83rem">Aucun accès enregistré.</p>{% endif %}
+  </div>
+  {% endfor %}
+
+  <!-- Paiements -->
+  <div class="card">
+    <div class="card-title">Paiements ({{ payments|length }})</div>
+    {% if payments %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Référence</th></tr></thead>
+        <tbody>
+        {% for p in payments %}
+          <tr><td class="mono" style="font-size:.75rem">{{ p.created_at[:16] if p.created_at else '—' }}</td>
+              <td>{{ plans[p.plan].label if p.plan in plans else p.plan }}</td>
+              <td class="mono">{{ "{:,}".format(p.amount).replace(",", " ") }} F</td>
+              <td style="font-size:.8rem">{{ p.method }}</td>
+              <td>{% if p.status == 'confirmed' %}<span class="pill g">Confirmé</span>{% elif p.status == 'pending' %}<span class="pill y">En attente</span>{% else %}<span class="pill r">{{ p.status }}</span>{% endif %}</td>
+              <td class="mono" style="font-size:.72rem;color:var(--muted);word-break:break-all">{{ p.reference or '—' }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p style="color:var(--muted);font-size:.85rem">Aucun paiement.</p>{% endif %}
+  </div>
+
+  <!-- Zone dangereuse -->
+  <div class="danger-zone">
+    <div style="font-weight:600;font-size:.9rem;color:#8C1D18;margin-bottom:.3rem">Supprimer ce compte</div>
+    <p style="font-size:.82rem;color:#8C1D18;line-height:1.55;margin:0 0 .9rem">
+      Supprime l'opérateur et <strong>toutes</strong> ses données : abonnements, paiements, routeurs,
+      appareils VPN, bot Telegram et fichiers du tenant. <strong>Irréversible.</strong>
+    </p>
+    <form method="POST" action="{{ url_for('admin_client_delete', cid=client.id) }}"
+          onsubmit="return confirm('Supprimer définitivement le compte de {{ client.full_name }} et toutes ses données ? Cette action est irréversible.')">
+      {{ csrf_field() }}
+      <button type="submit" class="btn btn-danger btn-sm">Supprimer définitivement</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ page.title }} — HotspotPro</title>
+<meta name="robots" content="index, follow">
+<style>
+  :root{--ink:#0a0a12;--muted:#6b6b7a;--accent:#ff4d1c;--line:rgba(10,10,18,.1);--bg:#f4f1eb;--panel:#0a0a12}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       line-height:1.65}
+  a{color:var(--accent)}
+  .topbar{background:var(--panel);padding:1.1rem 6%;display:flex;align-items:center;gap:.6rem}
+  .topbar a{display:flex;align-items:center;gap:.55rem;text-decoration:none;color:#fff;font-weight:700;font-size:1.05rem;
+            font-family:'Times New Roman',Georgia,serif;font-style:italic}
+  .topbar .dot{width:26px;height:26px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+  main{max-width:760px;margin:0 auto;padding:3rem 1.4rem 4rem}
+  h1{font-family:'Times New Roman',Georgia,serif;font-size:2rem;letter-spacing:-.02em;margin:0 0 .3rem}
+  .updated{color:var(--muted);font-size:.82rem;margin:0 0 2rem}
+  .content h2{font-size:1.12rem;margin:2rem 0 .6rem;letter-spacing:-.01em}
+  .content p,.content li{color:#33333f;font-size:.95rem}
+  .content p.lead{font-size:1.05rem;color:var(--ink);border-left:3px solid var(--accent);padding-left:1rem;margin:0 0 1.6rem}
+  .content ul{padding-left:1.2rem;margin:.4rem 0 1rem}
+  .content li{margin-bottom:.4rem}
+  .backhome{display:inline-block;margin-top:2.5rem;font-size:.9rem;text-decoration:none;color:var(--muted)}
+  .backhome:hover{color:var(--accent)}
+  footer{background:var(--panel);color:rgba(255,255,255,.4);padding:1.6rem 6%;font-size:.78rem;text-align:center}
+  footer a{color:rgba(255,255,255,.55);text-decoration:none;margin:0 .5rem}
+  footer a:hover{color:#fff}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#111119;--ink:#f2f2f5;--muted:#9a9aa8;--line:rgba(255,255,255,.12)}
+    .content p,.content li{color:#cfcfd8}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="/">
+      <span class="dot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/></svg></span>
+      HotspotPro
+    </a>
+  </div>
+
+  <main>
+    <h1>{{ page.title }}</h1>
+    <p class="updated">Derniere mise a jour : {{ updated }}</p>
+    <div class="content">
+      {{ page.body|safe }}
+    </div>
+    <a class="backhome" href="/">&larr; Retour a l'accueil</a>
+  </main>
+
+  <footer>
+    <div>
+      <a href="/legal/conditions">Conditions</a>·
+      <a href="/legal/confidentialite">Confidentialite</a>·
+      <a href="/legal/mentions-legales">Mentions legales</a>·
+      <a href="mailto:{{ contact }}">{{ contact }}</a>
+    </div>
+    <p style="margin:.7rem 0 0">© 2026 HotspotPro</p>
+  </footer>
+</body>
+</html>

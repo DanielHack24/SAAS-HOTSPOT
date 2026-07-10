@@ -3,12 +3,22 @@ services.py — Logique métier partagée (activation d'abonnements et de
 routeurs). Utilisée à la fois par le webhook FedaPay et par la
 confirmation manuelle admin, pour garantir un comportement identique.
 """
-import re, json, secrets
+import re, json, secrets, calendar
 import urllib.request, urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import config
 import webapp_core as core
+
+
+def add_months(dt: datetime, months: int) -> datetime:
+    """Ajoute des mois calendaires réels (12 mois = 1 an, pas 360 jours).
+    Le 31 janvier + 1 mois donne le 28/29 février."""
+    month = dt.month - 1 + months
+    year  = dt.year + month // 12
+    month = month % 12 + 1
+    day   = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
 
 
 def send_telegram_notify(bot_token: str, chat_id: str, message: str) -> bool:
@@ -42,7 +52,7 @@ def activate_subscription(conn, client_id: int, plan: str) -> tuple[int, datetim
     paiement."""
     months = config.PLANS[plan]["months"]
     start  = datetime.now()
-    end    = start + timedelta(days=30 * months)
+    end    = add_months(start, months)
 
     old_row = conn.execute("""
         SELECT * FROM subscriptions
@@ -97,8 +107,9 @@ def activate_subscription(conn, client_id: int, plan: str) -> tuple[int, datetim
     return sub_id, end
 
 
-def activate_device(conn, device: dict) -> str | None:
-    """Provisionne un routeur MikroTik supplémentaire déjà payé.
+def activate_device(conn, device: dict, plan: str = "1m") -> str | None:
+    """Provisionne un routeur MikroTik supplémentaire déjà payé, avec une
+    date de fin calquée sur le plan payé (le cron le suspendra ensuite).
     Retourne le slug créé (ou None si le device est introuvable)."""
     client_row = conn.execute("SELECT * FROM clients WHERE id=?",
                               (device["client_id"],)).fetchone()
@@ -106,9 +117,15 @@ def activate_device(conn, device: dict) -> str | None:
         return None
     client = dict(client_row)
 
+    months = config.PLANS.get(plan, config.PLANS["1m"])["months"]
+    end    = add_months(datetime.now(), months)
+
     slug = device.get("slug") or make_slug(client["full_name"], f"dev{device['id']}")
-    conn.execute("UPDATE mikrotik_devices SET provisioned=1, slug=? WHERE id=?",
-                 (slug, device["id"]))
+    conn.execute("""
+        UPDATE mikrotik_devices
+        SET provisioned=1, active=1, slug=?, end_date=?
+        WHERE id=?
+    """, (slug, end.strftime("%Y-%m-%d %H:%M:%S"), device["id"]))
 
     if core.PROVISIONER_OK:
         sub_row = conn.execute("SELECT * FROM subscriptions WHERE id=?",

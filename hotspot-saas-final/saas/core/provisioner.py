@@ -30,9 +30,9 @@ HUB_URL     = f"http://127.0.0.1:{HUB_PORT}"
 # ═══════════════════════════════════════════════
 
 def _hub_request(path: str, method: str = "GET", timeout: int = 5) -> dict:
-    sep = "&" if "?" in path else "?"
-    url = f"{HUB_URL}{path}{sep}key={HUB_KEY}" if HUB_KEY else f"{HUB_URL}{path}"
-    req = urllib.request.Request(url, method=method)
+    # Clé en header : une query string finirait dans les logs d'accès
+    headers = {"X-Hub-Key": HUB_KEY} if HUB_KEY else {}
+    req = urllib.request.Request(f"{HUB_URL}{path}", method=method, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
 

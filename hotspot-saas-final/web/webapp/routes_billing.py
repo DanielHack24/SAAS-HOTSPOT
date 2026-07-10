@@ -20,7 +20,7 @@ def subscribe():
         plan = "3m"
     return render_template("subscribe.html", plan=plan,
                            p=config.PLANS[plan], plans=config.PLANS,
-                           fedapay_public_key=config.FEDAPAY_PUBLIC_KEY)
+                           fedapay_public_key=config.fedapay_public_key())
 
 
 @app.route("/subscribe/checkout", methods=["POST"])
@@ -55,7 +55,8 @@ def subscribe_checkout():
         return redirect(payment_url)
 
     except Exception as e:
-        flash(f"Erreur lors de la création du paiement : {e}", "error")
+        print(f"[BILLING] Erreur création transaction FedaPay : {e}", flush=True)
+        flash("Erreur lors de la création du paiement. Veuillez réessayer dans quelques instants.", "error")
         return redirect(url_for("subscribe", plan=plan))
 
 
@@ -66,15 +67,15 @@ def subscribe_callback():
     Purement informatif : l'activation réelle passe par le webhook signé."""
     status = request.args.get("status", "")
     if status == "approved":
-        flash("✅ Paiement confirmé ! Votre abonnement est en cours d'activation automatique.", "success")
+        flash("Paiement confirmé. Votre abonnement est en cours d'activation automatique.", "success")
         return redirect(url_for("dashboard"))
     elif status == "declined":
-        flash("❌ Paiement refusé. Veuillez réessayer.", "error")
+        flash("Paiement refusé. Veuillez réessayer.", "error")
         return redirect(url_for("subscribe"))
     elif status == "canceled":
-        flash("⚠️ Paiement annulé.", "warning")
+        flash("Paiement annulé.", "warning")
         return redirect(url_for("subscribe"))
-    flash("⏳ Paiement en cours de traitement…", "info")
+    flash("Paiement en cours de traitement…", "info")
     return redirect(url_for("dashboard"))
 
 
@@ -84,13 +85,13 @@ def mikrotik_callback():
     """FedaPay redirige ici après paiement d'un routeur supplémentaire."""
     status = request.args.get("status", "")
     if status == "approved":
-        flash("✅ Paiement reçu ! Votre routeur sera activé sous peu.", "success")
+        flash("Paiement reçu. Votre routeur sera activé sous peu.", "success")
     elif status == "declined":
-        flash("❌ Paiement refusé. Veuillez réessayer.", "error")
+        flash("Paiement refusé. Veuillez réessayer.", "error")
     elif status == "canceled":
-        flash("⚠️ Paiement annulé.", "warning")
+        flash("Paiement annulé.", "warning")
     else:
-        flash("⏳ Paiement en cours de vérification…", "info")
+        flash("Paiement en cours de vérification…", "info")
     return redirect(url_for("dashboard"))
 
 
@@ -149,6 +150,18 @@ def webhook_fedapay():
     return _confirm_subscription_payment(trans_id, evt)
 
 
+def _amount_invalid(evt: dict, expected_amount: int, trans_id: str) -> str | None:
+    """Vérifie devise et montant du webhook. Retourne un message d'erreur
+    ou None si tout est conforme."""
+    if evt.get("currency") and evt["currency"] != "XOF":
+        print(f"[WEBHOOK] Devise inattendue : {evt['currency']} (ref {trans_id})", flush=True)
+        return "devise invalide"
+    if evt.get("amount") is not None and int(evt["amount"]) < expected_amount:
+        print(f"[WEBHOOK] Montant insuffisant : {evt['amount']} < {expected_amount} (ref {trans_id})", flush=True)
+        return "montant insuffisant"
+    return None
+
+
 def _confirm_subscription_payment(trans_id: str, evt: dict):
     conn = get_db()
     row  = conn.execute(
@@ -160,18 +173,26 @@ def _confirm_subscription_payment(trans_id: str, evt: dict):
         return jsonify({"status": "ignored", "reason": "paiement inconnu ou déjà traité"}), 200
     payment = dict(row)
 
-    if evt.get("amount") is not None and int(evt["amount"]) < payment["amount"]:
+    err = _amount_invalid(evt, payment["amount"], trans_id)
+    if err:
         conn.close()
-        print(f"[WEBHOOK] Montant insuffisant : {evt['amount']} < {payment['amount']} (ref {trans_id})", flush=True)
-        return jsonify({"error": "montant insuffisant"}), 400
+        return jsonify({"error": err}), 400
 
     try:
-        sub_id, end = services.activate_subscription(conn, payment["client_id"], payment["plan"])
-        conn.execute("""
+        # Claim atomique : si un webhook concurrent a déjà confirmé ce
+        # paiement, rowcount vaut 0 et on n'active rien une deuxième fois.
+        cur = conn.execute("""
             UPDATE payments
-            SET status='confirmed', confirmed_at=datetime('now','localtime'), subscription_id=?
-            WHERE id=?
-        """, (sub_id, payment["id"]))
+            SET status='confirmed', confirmed_at=datetime('now','localtime')
+            WHERE id=? AND status='pending'
+        """, (payment["id"],))
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"status": "ignored", "reason": "déjà traité"}), 200
+
+        sub_id, end = services.activate_subscription(conn, payment["client_id"], payment["plan"])
+        conn.execute("UPDATE payments SET subscription_id=? WHERE id=?",
+                     (sub_id, payment["id"]))
         conn.commit()
 
         client_row = conn.execute("SELECT * FROM clients WHERE id=?",
@@ -205,21 +226,26 @@ def _confirm_device_payment(trans_id: str, evt: dict):
         return jsonify({"status": "ignored", "reason": "paiement routeur inconnu ou déjà traité"}), 200
     payment = dict(row)
 
-    if evt.get("amount") is not None and int(evt["amount"]) < payment["amount"]:
+    err = _amount_invalid(evt, payment["amount"], trans_id)
+    if err:
         conn.close()
-        return jsonify({"error": "montant insuffisant"}), 400
+        return jsonify({"error": err}), 400
 
     try:
+        cur = conn.execute("""
+            UPDATE mikrotik_payments
+            SET status='confirmed', confirmed_at=datetime('now','localtime')
+            WHERE id=? AND status='pending'
+        """, (payment["id"],))
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"status": "ignored", "reason": "déjà traité"}), 200
+
         device_row = conn.execute("SELECT * FROM mikrotik_devices WHERE id=?",
                                   (payment["device_id"],)).fetchone()
         if device_row:
-            services.activate_device(conn, dict(device_row))
+            services.activate_device(conn, dict(device_row), payment.get("plan") or "1m")
 
-        conn.execute("""
-            UPDATE mikrotik_payments
-            SET status='confirmed', confirmed_at=datetime('now','localtime')
-            WHERE id=?
-        """, (payment["id"],))
         conn.commit()
         conn.close()
         return jsonify({"status": "ok"}), 200

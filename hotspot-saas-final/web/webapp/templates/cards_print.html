@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartes — Lot #{{ batch.id }} — HotspotPro</title>
+<style>
+  :root{--ink:#131720;--muted:#5B6472;--accent:#C2410C;--border:#C9CED6}
+  *{box-sizing:border-box}
+  body{margin:0;background:#EEF0F3;font-family:'Segoe UI',Arial,sans-serif;color:var(--ink)}
+  .toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);
+    padding:.8rem 1.2rem;display:flex;gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .toolbar h1{font-size:1rem;margin:0}
+  .toolbar .sub{font-size:.8rem;color:var(--muted)}
+  .tb-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;
+    padding:.55rem 1.1rem;font-size:.88rem;font-weight:600;cursor:pointer;text-decoration:none}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--border)}
+  .btn-ghost.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+  .sheet{max-width:210mm;margin:1rem auto;padding:0 1rem}
+
+  .cards{display:grid}
+  .cards.small{grid-template-columns:repeat(auto-fill,minmax(44mm,1fr));gap:3mm}
+  .cards.big{grid-template-columns:repeat(auto-fill,minmax(64mm,1fr));gap:5mm}
+
+  .card{border:1px dashed var(--border);border-radius:6px;background:#fff;
+    break-inside:avoid;text-align:center}
+  .cards.small .card{padding:2mm}
+  .cards.big .card{padding:4mm 4mm 5mm}
+
+  .brand{font-weight:700;letter-spacing:.02em;color:var(--accent);text-transform:uppercase;line-height:1.1}
+  .brand span{color:var(--ink)}
+  .cards.small .brand{font-size:.56rem}
+  .cards.big .brand{font-size:.82rem}
+
+  .meta{color:var(--muted)}
+  .cards.small .meta{font-size:.55rem;margin:.12rem 0 .28rem}
+  .cards.big .meta{font-size:.68rem;margin:.18rem 0 .55rem}
+
+  .code{font-family:'Consolas','Courier New',monospace;font-weight:700;letter-spacing:.06em;
+    border:1px solid var(--border);border-radius:5px;background:#FAFAFB}
+  .cards.small .code{font-size:.98rem;padding:.22rem .1rem}
+  .cards.big .code{font-size:1.35rem;padding:.4rem}
+
+  .pw{font-family:'Consolas','Courier New',monospace;color:var(--ink)}
+  .cards.small .pw{font-size:.62rem;margin-top:.18rem}
+  .cards.big .pw{font-size:.82rem;margin-top:.32rem}
+
+  .price{font-weight:700;color:var(--ink)}
+  .cards.small .price{font-size:.62rem;margin-top:.16rem}
+  .cards.big .price{font-size:.98rem;margin-top:.4rem}
+
+  .foot{color:var(--muted)}
+  .cards.small .foot{display:none}
+  .cards.big .foot{font-size:.58rem;margin-top:.45rem}
+
+  @media print{
+    .toolbar{display:none}
+    body{background:#fff}
+    .sheet{margin:0;max-width:none}
+    .card{border-color:#999}
+    @page{margin:8mm}
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>
+      <h1>Cartes — {{ seller_name }} · Lot #{{ batch.id }}</h1>
+      <div class="sub">{{ tickets|length }} tickets · profil {{ batch.profile }}{% if pmeta.price %} · {{ "{:,}".format(pmeta.price).replace(",", " ") }} FCFA{% endif %}</div>
+    </div>
+    <div class="tb-actions">
+      <a class="btn btn-ghost {% if size=='small' %}on{% endif %}" href="?size=small">Petit</a>
+      <a class="btn btn-ghost {% if size=='big' %}on{% endif %}" href="?size=big">Gros</a>
+      <button class="btn" onclick="window.print()">Imprimer / PDF</button>
+    </div>
+  </div>
+
+  <div class="sheet">
+    <div class="cards {{ size }}">
+      {% for t in tickets %}
+      <div class="card">
+        <div class="brand">Hotspot<span>Pro</span></div>
+        <div class="meta">{{ batch.profile }}{% if pmeta.validity %} · {{ pmeta.validity }}{% endif %}</div>
+        <div class="code">{{ t.username }}</div>
+        {% if not pw_same %}<div class="pw">{% if size=='big' %}Mot de passe : <b>{{ t.password }}</b>{% else %}{{ t.password }}{% endif %}</div>{% endif %}
+        {% if pmeta.price %}<div class="price">{{ "{:,}".format(pmeta.price).replace(",", " ") }} FCFA</div>{% endif %}
+        <div class="foot">Connectez-vous au WiFi puis saisissez ce code.</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>

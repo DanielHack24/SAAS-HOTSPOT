@@ -7,278 +7,306 @@
 <style>
 /* ── TABS ── */
 .dash-tabs{
-  display:flex;gap:.3rem;background:var(--white);border:1px solid var(--border);
-  border-radius:12px;padding:.35rem;margin-bottom:1.4rem;
-  box-shadow:0 2px 8px rgba(10,10,18,.04);
+  display:flex;gap:.25rem;background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:.3rem;margin-bottom:1.3rem;box-shadow:var(--shadow-1);
 }
 .dash-tab{
   flex:1;display:flex;align-items:center;justify-content:center;gap:.45rem;
-  padding:.6rem 1rem;border-radius:9px;border:none;cursor:pointer;
-  font-family:var(--fb);font-size:.84rem;font-weight:700;
-  color:var(--dim);background:transparent;transition:all .2s;
+  padding:.55rem 1rem;border-radius:7px;border:none;cursor:pointer;
+  font-family:var(--fb);font-size:.82rem;font-weight:600;
+  color:var(--muted);background:transparent;transition:background .15s,color .15s;
 }
-.dash-tab:hover{color:var(--ink);background:rgba(10,10,18,.04)}
-.dash-tab.active{
-  background:linear-gradient(135deg,var(--accent),#ff7043);
-  color:#fff;box-shadow:0 4px 14px rgba(255,77,28,.3);
-}
-.dash-tab .tab-icon{font-size:.95rem}
+.dash-tab:hover{color:var(--ink);background:var(--bg)}
+.dash-tab.active{background:var(--navy);color:#fff}
+.dash-tab svg{flex-shrink:0}
 
-/* ── STAT CARDS ── */
-.stat-icon-wrap{
-  float:right;width:42px;height:42px;border-radius:11px;
-  display:flex;align-items:center;justify-content:center;font-size:1.15rem;
-}
-.ic-green{background:rgba(34,197,94,.12);color:#16a34a}
-.ic-orange{background:rgba(255,77,28,.12);color:var(--accent)}
-.ic-blue{background:rgba(59,130,246,.12);color:#2563eb}
-.ic-purple{background:rgba(139,92,246,.12);color:#7c3aed}
-.ic-yellow{background:rgba(245,166,35,.12);color:#d97706}
-
-/* ── ACTIONS RAPIDES ── */
-.quick-actions{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:.75rem;margin-top:1rem;
-}
+/* ── QUICK ACTIONS ── */
+.quick-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:.4rem}
 .quick-action{
-  display:flex;flex-direction:column;align-items:center;gap:.5rem;
-  padding:1.1rem .8rem;border-radius:12px;text-decoration:none;
-  border:1.5px solid var(--border);background:var(--white);
-  transition:all .2s;cursor:pointer;
-  box-shadow:0 2px 6px rgba(10,10,18,.04);
+  display:flex;flex-direction:column;align-items:flex-start;gap:.55rem;
+  padding:.95rem 1rem;border-radius:9px;text-decoration:none;
+  border:1px solid var(--border);background:var(--surface);
+  transition:border-color .15s;cursor:pointer;
 }
-.quick-action:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(10,10,18,.1);border-color:transparent}
+.quick-action:hover{border-color:var(--ink)}
 .qa-icon{
-  width:46px;height:46px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+  width:32px;height:32px;border-radius:7px;background:var(--bg);color:var(--navy);
+  display:flex;align-items:center;justify-content:center;
 }
-.qa-label{font-size:.78rem;font-weight:700;color:var(--ink);text-align:center}
+.qa-label{font-size:.78rem;font-weight:600;color:var(--ink)}
 
 /* ── MIKROTIK CARDS ── */
 .mk-device{
-  background:var(--white);border:1px solid var(--border);border-radius:12px;
-  padding:1rem 1.2rem;display:flex;align-items:center;gap:1rem;
-  transition:box-shadow .2s;
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:.9rem 1.1rem;display:flex;align-items:center;gap:.9rem;
 }
-.mk-device:hover{box-shadow:0 4px 16px rgba(10,10,18,.08)}
 .mk-device-icon{
-  width:40px;height:40px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;
+  width:36px;height:36px;border-radius:8px;background:var(--bg);color:var(--navy);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 
 /* ── STATUS DOTS ── */
-.dot-green{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:.3rem;animation:pulse-g 2s infinite}
-.dot-red{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:.3rem}
-.dot-yellow{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:.3rem;animation:pulse-y 2s infinite}
-@keyframes pulse-g{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
-@keyframes pulse-y{0%,100%{box-shadow:0 0 0 0 rgba(245,159,11,.4)}50%{box-shadow:0 0 0 5px rgba(245,159,11,0)}}
+.dot-green{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:.35rem}
+.dot-red{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:.35rem}
 
-/* Tab content */
-.tab-panel{display:none;animation:tabIn .25s ease}
+.tab-panel{display:none}
 .tab-panel.active{display:block}
-@keyframes tabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* Modal suppression */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,10,18,.55);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.modal-overlay.open{display:flex;animation:fadeIn .2s ease}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.modal-box{background:#fff;border-radius:16px;padding:2rem;max-width:420px;width:90%;margin:1rem;box-shadow:0 24px 64px rgba(10,10,18,.25)}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(14,27,41,.55);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border-radius:12px;padding:1.8rem;max-width:420px;width:90%;margin:1rem;box-shadow:0 24px 64px rgba(14,27,41,.3)}
+
+/* Config rows */
+.cfg-row{display:flex;justify-content:space-between;align-items:center;padding:.65rem .8rem;background:var(--bg);border-radius:7px;gap:1rem}
+.cfg-row span:first-child{color:var(--muted);font-weight:500;font-size:.8rem;flex-shrink:0}
+
+/* Plan tiles (no subscription) */
+.plan-pick{
+  border:1px solid var(--border);border-radius:9px;padding:1rem;
+  text-decoration:none;display:block;text-align:center;position:relative;
+  background:var(--surface);color:var(--ink);
+}
+.plan-pick.featured{background:var(--navy);border-color:var(--navy);color:#fff}
+/* Quand la glissière est active, la tuile vedette rend son fond sombre */
+.glide-wrap.hovered .plan-pick.featured:not(.glide-on){
+  background:var(--surface);border-color:var(--border);color:var(--ink);
+}
+.plan-pick .pop-tag{
+  position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:.58rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;padding:.14rem .5rem;border-radius:4px;white-space:nowrap;
+}
+
+/* ── STAT CARDS : modèle carte dégradée (icône + label + valeur) ── */
+.gstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.9rem;margin-bottom:1.3rem}
+.gstat{position:relative;border-radius:14px;padding:1.2rem 1.25rem;border:1px solid var(--border);overflow:hidden;
+  transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s ease}
+.gstat:hover{transform:translateY(-3px);box-shadow:0 16px 34px -18px rgba(18,38,58,.28)}
+.gstat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:.85rem}
+.gstat-label{font-size:.75rem;color:var(--muted);font-weight:600;letter-spacing:.01em}
+.gstat-val{font-family:var(--fh);font-size:1.75rem;font-weight:700;letter-spacing:-.02em;line-height:1.1;
+  margin-top:.25rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.gstat-val.sm{font-size:1.05rem;margin-top:.35rem}
+.gstat-sub{font-size:.72rem;color:var(--muted);margin-top:.28rem}
+.gstat.g-green{background:linear-gradient(140deg,#ECF7F0,#F5FBF7);border-color:#D3EADC}
+.gstat.g-green .gstat-icon{background:#D6EDDD;color:var(--green)}
+.gstat.g-navy{background:linear-gradient(140deg,#EEF3FA,#F6F9FD);border-color:#D8E4F1}
+.gstat.g-navy .gstat-icon{background:#DBE6F5;color:var(--navy)}
+.gstat.g-orange{background:linear-gradient(140deg,#FBF0EA,#FDF7F2);border-color:#F1D8C8}
+.gstat.g-orange .gstat-icon{background:#F7DFD1;color:var(--accent)}
+.gstat.g-amber{background:linear-gradient(140deg,#FBF6EA,#FDFBF2);border-color:#EBDEBF}
+.gstat.g-amber .gstat-icon{background:#F2E6C9;color:#B45309}
+.gstat.g-slate{background:linear-gradient(140deg,#F1F3F7,#F8F9FB);border-color:#E0E5EC}
+.gstat.g-slate .gstat-icon{background:#E3E8EF;color:#475569}
+@media (prefers-reduced-motion: reduce){.gstat:hover{transform:none}}
 </style>
 {% endblock %}
 
 {% block content %}
 
 {% if not sub %}
-<!-- ══ PAS D'ABONNEMENT ══ -->
+<!-- ── PAS D'ABONNEMENT ── -->
 <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
-  <div style="background:linear-gradient(135deg,#0f1535,#1a2a6c);border-radius:16px;padding:2rem 2.2rem;position:relative;overflow:hidden">
-    <div style="position:absolute;top:-20%;right:-5%;width:55%;height:130%;background:radial-gradient(ellipse,rgba(255,77,28,.2) 0%,transparent 65%);border-radius:50%;pointer-events:none"></div>
-    <div style="position:relative;z-index:1">
-      <div style="font-size:2rem;margin-bottom:.8rem">👋</div>
-      <h2 style="font-family:var(--fh);font-size:1.7rem;font-weight:700;font-style:italic;color:#fff;margin-bottom:.5rem">Bienvenue, {{ client.full_name.split()[0] }} !</h2>
-      <p style="color:rgba(255,255,255,.45);font-size:.875rem;line-height:1.65;max-width:42ch">Choisissez un abonnement pour démarrer votre système de comptabilité hotspot.</p>
-    </div>
+  <div style="background:var(--navy);border-radius:12px;padding:1.9rem 2.1rem">
+    <h2 style="font-family:var(--fh);font-size:1.45rem;font-weight:700;color:#fff;margin-bottom:.5rem;letter-spacing:-.01em">Bienvenue, {{ client.full_name.split()[0] }}</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:.87rem;line-height:1.65;max-width:46ch">Choisissez un abonnement pour démarrer votre système de comptabilité hotspot.</p>
   </div>
 
   <div class="card">
-    <div class="card-title">💳 Choisissez votre plan</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1rem">
+    <div class="card-title">Choisissez votre plan</div>
+    <div class="glide-wrap" data-glide-radius="9px" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1rem">
       {% for key, p in plans.items() %}
-      <a href="{{ url_for('subscribe') }}?plan={{ key }}"
-         style="background:{% if key=='3m' %}linear-gradient(135deg,#0f1535,#1a2a6c){% else %}#f8f9ff{% endif %};
-                border:1.5px solid {% if key=='3m' %}transparent{% else %}var(--border){% endif %};
-                border-radius:12px;padding:1.1rem;text-decoration:none;
-                color:{% if key=='3m' %}#fff{% else %}var(--ink){% endif %};
-                display:block;text-align:center;position:relative;transition:transform .18s,box-shadow .18s"
-         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(10,10,18,.12)'"
-         onmouseout="this.style.transform='';this.style.boxShadow=''">
-        {% if key=='3m' %}<div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--ink);font-size:.6rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:.12rem .45rem;border-radius:100px;white-space:nowrap">⭐ Populaire</div>{% endif %}
-        <div style="font-size:.75rem;opacity:.6;margin-bottom:.35rem">{{ p.label }}</div>
-        <div style="font-family:var(--fh);font-size:1.3rem;font-weight:800;letter-spacing:-.03em">{{ "{:,}".format(p.price).replace(",","&thinsp;")|safe }}<span style="font-size:.7rem;font-weight:400;opacity:.5"> FCFA</span></div>
+      <a href="{{ url_for('subscribe') }}?plan={{ key }}" class="plan-pick glide-item {% if key=='3m' %}featured{% endif %}">
+        {% if key=='3m' %}<div class="pop-tag">Populaire</div>{% endif %}
+        <div style="font-size:.72rem;opacity:.65;margin-bottom:.35rem">{{ p.label }}</div>
+        <div style="font-family:var(--fh);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ "{:,}".format(p.price).replace(",","&thinsp;")|safe }}<span style="font-size:.68rem;font-weight:400;opacity:.55"> FCFA</span></div>
       </a>
       {% endfor %}
     </div>
-    <div style="background:#f0f4ff;border-radius:9px;padding:.85rem;font-size:.8rem;color:var(--dim);line-height:1.5">
-      💡 Paiement sécurisé via FedaPay — T-Money, Flooz, Wave, Orange, MTN et plus. Activation instantanée.
+    <div style="background:var(--bg);border-radius:8px;padding:.85rem;font-size:.79rem;color:var(--muted);line-height:1.5">
+      Paiement sécurisé via FedaPay — T-Money, Flooz, Wave, Orange, MTN et plus. Activation instantanée.
     </div>
   </div>
 </div>
 
 {% else %}
-<!-- ══ ABONNEMENT ACTIF ══ -->
+<!-- ── ABONNEMENT ACTIF ── -->
 
 {% if days <= 7 and days > 0 %}
-<div class="alert alert-warning" style="margin-bottom:1.2rem">⚠️ <div><strong>Expire dans {{ days }} jour(s).</strong> <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" style="color:inherit;font-weight:700">Renouveler →</a></div></div>
+<div class="alert alert-warning" style="margin-bottom:1.2rem">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <div><strong>Expire dans {{ days }} jour(s).</strong> <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" style="color:inherit;font-weight:700">Renouveler</a></div>
+</div>
 {% elif days == 0 %}
-<div class="alert alert-danger" style="margin-bottom:1.2rem">❌ <div><strong>Abonnement expiré.</strong> <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" style="color:inherit;font-weight:700">Renouveler →</a></div></div>
+<div class="alert alert-danger" style="margin-bottom:1.2rem">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+  <div><strong>Abonnement expiré.</strong> <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" style="color:inherit;font-weight:700">Renouveler</a></div>
+</div>
 {% endif %}
 
 {% if not sub.provisioned %}
-<div class="alert alert-info" style="margin-bottom:1.2rem">ℹ️ <div><strong>Configuration requise.</strong> <a href="{{ url_for('configure') }}" style="color:inherit;font-weight:700">Configurer →</a></div></div>
+<div class="alert alert-info" style="margin-bottom:1.2rem">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+  <div><strong>Configuration requise.</strong> <a href="{{ url_for('configure') }}" style="color:inherit;font-weight:700">Configurer</a></div>
+</div>
 {% endif %}
 
 <!-- TABS -->
 <div class="dash-tabs">
   <button class="dash-tab active" onclick="showTab('overview')" id="tab-btn-overview">
-    <span class="tab-icon">📊</span> Vue d'ensemble
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Vue d'ensemble
   </button>
   <button class="dash-tab" onclick="showTab('mikrotik')" id="tab-btn-mikrotik">
-    <span class="tab-icon">📡</span> Mes routeurs
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+    Mes routeurs
   </button>
   <button class="dash-tab" onclick="showTab('config')" id="tab-btn-config">
-    <span class="tab-icon">⚙️</span> Configuration
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+    Configuration
   </button>
 </div>
 
-<!-- ══ TAB : VUE D'ENSEMBLE ══ -->
+<!-- ── TAB : VUE D'ENSEMBLE ── -->
 <div class="tab-panel active" id="panel-overview">
 
-  <!-- Stat Cards -->
-  <div class="stat-cards">
+  <div class="gstat-grid">
 
-    <div class="stat-card">
-      <div class="stat-icon-wrap ic-green">📅</div>
-      <div class="stat-card-label">Jours restants</div>
-      <div class="stat-card-val" style="color:{% if days > 7 %}#22c55e{% elif days > 0 %}#f59e0b{% else %}#ef4444{% endif %}">{{ days }}</div>
-      <div class="stat-card-trend {% if days > 7 %}up{% else %}neutral{% endif %}">
-        {% if days > 7 %}✓ Abonnement actif{% elif days > 0 %}⚠️ Bientôt expiré{% else %}✗ Expiré{% endif %}
+    <!-- Jours restants -->
+    <div class="gstat g-green">
+      <div class="gstat-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
+      <div class="gstat-label">Jours restants</div>
+      <div class="gstat-val" style="color:{% if days > 7 %}var(--green){% elif days > 0 %}var(--amber){% else %}var(--red){% endif %}">{{ days }}</div>
+      <div class="gstat-sub">{% if days > 7 %}Abonnement actif{% elif days > 0 %}Bientôt expiré{% else %}Expiré{% endif %}</div>
       {% set total_days = plans[sub.plan].months * 30 %}
       {% set pct = [[(days / total_days * 100)|int, 0]|max, 100]|min %}
-      <div class="progress-wrap" style="margin-top:.6rem">
+      <div class="progress-wrap" style="margin-top:.7rem">
         <div class="progress-bar {% if pct > 40 %}pg-green{% elif pct > 15 %}pg-yellow{% endif %}" style="width:{{ pct }}%"></div>
       </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-icon-wrap ic-blue">🌐</div>
-      <div class="stat-card-label">API Serveur</div>
-      <div class="stat-card-val" style="font-size:1.1rem;margin-top:.3rem">
+    <!-- API serveur -->
+    <div class="gstat g-navy">
+      <div class="gstat-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+      </div>
+      <div class="gstat-label">API serveur</div>
+      <div class="gstat-val sm">
         {% if svc_status %}
-          {% if svc_status.api=='active' %}<span class="dot-green"></span><span style="color:#22c55e">En ligne</span>
-          {% else %}<span class="dot-red"></span><span style="color:#ef4444">Hors ligne</span>{% endif %}
+          {% if svc_status.api=='active' %}<span class="dot-green"></span><span style="color:var(--green)">En ligne</span>
+          {% else %}<span class="dot-red"></span><span style="color:var(--red)">Hors ligne</span>{% endif %}
         {% elif sub.provisioned %}
-          <span style="color:var(--dim);font-size:.9rem">—</span>
+          <span style="color:var(--muted)">&mdash;</span>
         {% else %}
-          <span style="color:var(--dim);font-size:.85rem">Non déployé</span>
+          <span style="color:var(--muted);font-size:.85rem">Non déployé</span>
         {% endif %}
       </div>
-      <div class="stat-card-sub">Réception MikroTik</div>
+      <div class="gstat-sub">Réception MikroTik</div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-icon-wrap ic-purple">🤖</div>
-      <div class="stat-card-label">Bot Telegram</div>
-      <div class="stat-card-val" style="font-size:1.1rem;margin-top:.3rem">
+    <!-- Bot Telegram -->
+    <div class="gstat g-orange">
+      <div class="gstat-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </div>
+      <div class="gstat-label">Bot Telegram</div>
+      <div class="gstat-val sm">
         {% if svc_status %}
-          {% if svc_status.bot=='active' %}<span class="dot-green"></span><span style="color:#22c55e">Actif</span>
-          {% else %}<span class="dot-red"></span><span style="color:#ef4444">Arrêté</span>{% endif %}
+          {% if svc_status.bot=='active' %}<span class="dot-green"></span><span style="color:var(--green)">Actif</span>
+          {% else %}<span class="dot-red"></span><span style="color:var(--red)">Arrêté</span>{% endif %}
         {% elif sub.provisioned %}
-          <span style="color:var(--dim);font-size:.9rem">—</span>
+          <span style="color:var(--muted)">&mdash;</span>
         {% else %}
-          <span style="color:var(--dim);font-size:.85rem">Non déployé</span>
+          <span style="color:var(--muted);font-size:.85rem">Non déployé</span>
         {% endif %}
       </div>
-      <div class="stat-card-sub">Notifications vendeurs</div>
+      <div class="gstat-sub">Notifications vendeurs</div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-icon-wrap ic-orange">📅</div>
-      <div class="stat-card-label">Expiration</div>
-      <div class="stat-card-val" style="font-size:1.1rem;margin-top:.3rem">{{ sub.end_date[:10] if sub.end_date else '—' }}</div>
-      <div class="stat-card-sub">Plan {{ plans[sub.plan].label }}</div>
+    <!-- Expiration -->
+    <div class="gstat g-amber">
+      <div class="gstat-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="gstat-label">Expiration</div>
+      <div class="gstat-val sm mono">{{ sub.end_date[:10] if sub.end_date else '—' }}</div>
+      <div class="gstat-sub">Plan {{ plans[sub.plan].label }}</div>
     </div>
 
-    <div class="stat-card" id="last-activity-card">
-      <div class="stat-icon-wrap ic-yellow">⚡</div>
-      <div class="stat-card-label">Dernière vente</div>
-      <div class="stat-card-val" style="font-size:1.1rem;margin-top:.3rem;color:var(--dim)" id="last-activity-val">—</div>
-      <div class="stat-card-sub" id="last-activity-sub">Activité récente</div>
+    <!-- Dernière vente -->
+    <div class="gstat g-slate" id="last-activity-card">
+      <div class="gstat-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="gstat-label">Dernière vente</div>
+      <div class="gstat-val sm" style="color:var(--muted)" id="last-activity-val">&mdash;</div>
+      <div class="gstat-sub" id="last-activity-sub">Activité récente</div>
     </div>
 
   </div>
 
-  <!-- Stats ventes du jour -->
   {% if sub and sub.provisioned %}
   <div class="card" id="stats-today-card" style="margin-bottom:1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-      <div class="card-title" style="margin-bottom:0">📊 Ventes du jour</div>
-      <button onclick="loadStats()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.3rem .8rem;font-size:.78rem;cursor:pointer;color:var(--dim);font-family:var(--fb)">🔄 Actualiser</button>
+      <div class="card-title" style="margin-bottom:0">Ventes du jour</div>
+      <button onclick="loadStats()" class="btn btn-outline btn-sm">Actualiser</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.7rem;margin-bottom:1.1rem">
-      <div style="background:linear-gradient(135deg,#0f1535,#1a2a6c);border-radius:12px;padding:1rem 1.2rem;text-align:center">
-        <div style="font-size:.72rem;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Tickets vendus</div>
-        <div style="font-family:var(--fh);font-size:2rem;font-weight:800;color:#fff" id="stat-total-sales">—</div>
-        <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-top:.15rem">aujourd'hui</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;margin-bottom:1.1rem">
+      <div style="background:var(--navy);border-radius:9px;padding:1rem 1.2rem">
+        <div style="font-size:.65rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.35rem;font-weight:600">Tickets vendus</div>
+        <div style="font-family:var(--fh);font-size:1.8rem;font-weight:700;color:#fff;font-variant-numeric:tabular-nums" id="stat-total-sales">&mdash;</div>
+        <div style="font-size:.68rem;color:rgba(255,255,255,.4);margin-top:.15rem">aujourd'hui</div>
       </div>
-      <div style="background:linear-gradient(135deg,#ff4d1c,#ff7043);border-radius:12px;padding:1rem 1.2rem;text-align:center">
-        <div style="font-size:.72rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">Revenus</div>
-        <div style="font-family:var(--fh);font-size:1.6rem;font-weight:800;color:#fff" id="stat-total-revenue">—</div>
-        <div style="font-size:.7rem;color:rgba(255,255,255,.55);margin-top:.15rem">FCFA</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:1rem 1.2rem">
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.35rem;font-weight:600">Revenus</div>
+        <div style="font-family:var(--fh);font-size:1.5rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums" id="stat-total-revenue">&mdash;</div>
+        <div style="font-size:.68rem;color:var(--muted);margin-top:.15rem">FCFA</div>
       </div>
     </div>
     <div id="stats-sellers-wrap">
-      <div style="font-size:.78rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem">Top vendeurs du jour</div>
+      <div style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Top vendeurs du jour</div>
       <div id="stats-sellers-list" style="display:flex;flex-direction:column;gap:.4rem">
-        <div style="color:var(--dim);font-size:.83rem;text-align:center;padding:.8rem">Chargement…</div>
+        <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:.8rem">Chargement…</div>
       </div>
     </div>
   </div>
 
-  <!-- Graphique 7 jours -->
   <div class="card" style="margin-bottom:1rem">
-    <div class="card-title">📈 Revenus — 7 derniers jours</div>
-    <div style="position:relative;height:160px;margin-top:.5rem">
-      <canvas id="revenueChart" style="width:100%;height:160px"></canvas>
+    <div class="card-title">Revenus des 7 derniers jours</div>
+    <div style="position:relative;height:172px;margin-top:.5rem">
+      <canvas id="revenueChart" style="display:block;width:100%;height:172px"></canvas>
+      <div id="chartTip" style="position:absolute;transform:translate(-50%,-100%);background:var(--navy);color:#fff;font-size:.72rem;line-height:1.35;padding:.35rem .6rem;border-radius:7px;pointer-events:none;opacity:0;transition:opacity .15s ease;white-space:nowrap;z-index:5;box-shadow:0 8px 22px rgba(14,27,41,.3)"></div>
     </div>
   </div>
   {% endif %}
 
-  <!-- Actions rapides -->
   <div class="card">
-    <div class="card-title">⚡ Actions rapides</div>
+    <div class="card-title">Actions rapides</div>
     <div class="quick-actions">
       {% if sub.provisioned %}
       <a href="{{ url_for('mikrotik_script') }}" class="quick-action">
-        <div class="qa-icon" style="background:#eff6ff">📋</div>
+        <div class="qa-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
         <div class="qa-label">Voir le script</div>
       </a>
       {% else %}
       <a href="{{ url_for('configure') }}" class="quick-action">
-        <div class="qa-icon" style="background:rgba(255,77,28,.08)">⚙️</div>
+        <div class="qa-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
         <div class="qa-label">Configurer</div>
       </a>
       {% endif %}
       <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" class="quick-action">
-        <div class="qa-icon" style="background:#f0fdf4">💳</div>
+        <div class="qa-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
         <div class="qa-label">Renouveler</div>
       </a>
       <a href="{{ url_for('mikrotik_add') }}" class="quick-action">
-        <div class="qa-icon" style="background:#fdf4ff">📡</div>
+        <div class="qa-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div>
         <div class="qa-label">Ajouter routeur</div>
       </a>
       <a href="{{ url_for('account') }}" class="quick-action">
-        <div class="qa-icon" style="background:#fff7ed">👤</div>
+        <div class="qa-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div class="qa-label">Mon profil</div>
       </a>
     </div>
@@ -286,13 +314,14 @@
 
 </div>
 
-<!-- ══ TAB : MES ROUTEURS ══ -->
+<!-- ── TAB : MES ROUTEURS ── -->
 <div class="tab-panel" id="panel-mikrotik">
 
   {% if mk_payments_pending %}
   {% for mkp in mk_payments_pending %}
   <div class="alert alert-warning">
-    ⏳ <div style="font-size:.83rem"><strong>{{ mkp.label or mkp.ip }}</strong> — Paiement FedaPay en cours de vérification
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <div style="font-size:.83rem"><strong>{{ mkp.label or mkp.ip }}</strong> — Paiement FedaPay en cours de vérification
     ({% if mkp.plan and plans[mkp.plan] is defined %}{{ "{:,}".format(mkp.amount).replace(",", " ") }} FCFA · {{ plans[mkp.plan].label }}{% else %}{{ "{:,}".format(mkp.amount).replace(",", " ") }} FCFA{% endif %}). Activation automatique après confirmation.</div>
   </div>
   {% endfor %}
@@ -300,90 +329,91 @@
 
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <div>
-      <div style="font-family:var(--fh);font-weight:700;font-style:italic;font-size:1rem">Mes routeurs MikroTik</div>
-      <div style="font-size:.75rem;color:var(--dim);margin-top:.1rem">1 routeur inclus · supplémentaires à partir de {{ "{:,}".format(plans['1m'].price).replace(",", " ") }} FCFA</div>
+      <div style="font-family:var(--fh);font-weight:600;font-size:.95rem">Mes routeurs MikroTik</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-top:.1rem">1 routeur inclus · supplémentaires à partir de {{ "{:,}".format(plans['1m'].price).replace(",", " ") }} FCFA</div>
     </div>
-    <a href="{{ url_for('mikrotik_add') }}" class="btn btn-primary btn-sm">+ Ajouter</a>
+    <a href="{{ url_for('mikrotik_add') }}" class="btn btn-primary btn-sm">Ajouter</a>
   </div>
 
   <div style="display:flex;flex-direction:column;gap:.7rem">
-    <!-- Routeur principal -->
     <div class="mk-device">
-      <div class="mk-device-icon" style="background:rgba(255,77,28,.08)">📡</div>
+      <div class="mk-device-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+      </div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:.88rem;font-weight:700">Routeur principal</div>
-        <div style="font-size:.78rem;color:var(--dim);font-family:monospace">{{ sub.mikrotik_ip or '—' }}</div>
+        <div style="font-size:.87rem;font-weight:600">Routeur principal</div>
+        <div class="mono" style="font-size:.75rem;color:var(--muted)">{{ sub.mikrotik_ip or '—' }}</div>
       </div>
       <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
-        <span class="badge badge-green">● Inclus</span>
+        <span class="badge badge-green">Inclus</span>
         {% if sub.provisioned %}
-        <a href="{{ url_for('mikrotik_script') }}" class="btn btn-outline btn-sm">Script →</a>
+        <a href="{{ url_for('mikrotik_script') }}" class="btn btn-outline btn-sm">Script</a>
         {% endif %}
       </div>
     </div>
 
-    <!-- Routeurs additionnels -->
     {% for device in devices %}
     <div class="mk-device">
-      <div class="mk-device-icon" style="background:rgba(59,130,246,.08)">🌐</div>
+      <div class="mk-device-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+      </div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:.88rem;font-weight:700">{{ device.label }}</div>
-        <div style="font-size:.78rem;color:var(--dim);font-family:monospace">{{ device.ip }}</div>
+        <div style="font-size:.87rem;font-weight:600">{{ device.label }}</div>
+        <div class="mono" style="font-size:.75rem;color:var(--muted)">{{ device.ip }}</div>
       </div>
       <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
         {% if device.provisioned %}
-        <span class="badge badge-active">● Actif</span>
-        <a href="{{ url_for('mikrotik_device_script', device_id=device.id) }}" class="btn btn-outline btn-sm">Script →</a>
+        <span class="badge badge-active">Actif</span>
+        <a href="{{ url_for('mikrotik_device_script', device_id=device.id) }}" class="btn btn-outline btn-sm">Script</a>
         {% else %}
-        <span class="badge badge-yellow">⏳ En attente</span>
+        <span class="badge badge-yellow">En attente</span>
         {% endif %}
-        <button onclick="openDeleteModal({{ device.id }}, '{{ device.label }}')" class="btn btn-sm" style="background:rgba(239,68,68,.08);color:#991b1b;border:1px solid rgba(239,68,68,.18)">🗑</button>
+        <button onclick="openDeleteModal({{ device.id }}, '{{ device.label }}')" class="btn btn-danger btn-sm" aria-label="Supprimer {{ device.label }}">Supprimer</button>
       </div>
     </div>
     {% endfor %}
 
     {% if not devices %}
-    <div style="text-align:center;padding:2rem;background:var(--white);border:1.5px dashed var(--border);border-radius:12px;color:var(--dim)">
-      <div style="font-size:1.8rem;margin-bottom:.5rem">📡</div>
+    <div style="text-align:center;padding:2rem;background:var(--surface);border:1px dashed var(--border);border-radius:9px;color:var(--muted)">
       <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem">Aucun routeur supplémentaire</div>
-      <a href="{{ url_for('mikrotik_add') }}" style="color:var(--accent);font-weight:700;font-size:.82rem">+ Ajouter un MikroTik</a>
+      <a href="{{ url_for('mikrotik_add') }}" style="color:var(--accent);font-weight:600;font-size:.82rem;text-decoration:none">Ajouter un MikroTik</a>
     </div>
     {% endif %}
   </div>
 </div>
 
-<!-- ══ TAB : CONFIGURATION ══ -->
+<!-- ── TAB : CONFIGURATION ── -->
 <div class="tab-panel" id="panel-config">
   <div class="card">
-    <div class="card-title">⚙️ Configuration actuelle</div>
-    <div style="display:flex;flex-direction:column;gap:.75rem;font-size:.85rem">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:#f8f9ff;border-radius:9px">
-        <span style="color:var(--dim);font-weight:600">🤖 Bot Token</span>
-        <span style="font-family:monospace;font-size:.82rem;color:var(--ink)">{{ sub.bot_token[:24] if sub.bot_token else '—' }}…</span>
+    <div class="card-title">Configuration actuelle</div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;font-size:.85rem">
+      <div class="cfg-row">
+        <span>Bot Token</span>
+        <span class="mono" style="color:var(--ink)">{{ sub.bot_token[:24] if sub.bot_token else '—' }}…</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:#f8f9ff;border-radius:9px">
-        <span style="color:var(--dim);font-weight:600">💬 Chat ID</span>
-        <span style="font-family:monospace;color:var(--ink)">{{ sub.chat_id or '—' }}</span>
+      <div class="cfg-row">
+        <span>Chat ID</span>
+        <span class="mono" style="color:var(--ink)">{{ sub.chat_id or '—' }}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:#f8f9ff;border-radius:9px">
-        <span style="color:var(--dim);font-weight:600">🌐 IP MikroTik</span>
-        <span style="font-family:monospace;color:var(--ink)">{{ sub.mikrotik_ip or '—' }}</span>
+      <div class="cfg-row">
+        <span>IP MikroTik</span>
+        <span class="mono" style="color:var(--ink)">{{ sub.mikrotik_ip or '—' }}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:#f8f9ff;border-radius:9px">
-        <span style="color:var(--dim);font-weight:600">📦 Plan</span>
-        <span style="font-weight:700;color:var(--ink)">{{ plans[sub.plan].label }} — {{ "{:,}".format(plans[sub.plan].price).replace(",", " ") }} FCFA</span>
+      <div class="cfg-row">
+        <span>Plan</span>
+        <span style="font-weight:600;color:var(--ink)">{{ plans[sub.plan].label }} — {{ "{:,}".format(plans[sub.plan].price).replace(",", " ") }} FCFA</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:#f8f9ff;border-radius:9px">
-        <span style="color:var(--dim);font-weight:600">🗓️ Début</span>
-        <span style="color:var(--ink)">{{ sub.start_date[:10] if sub.start_date else '—' }}</span>
+      <div class="cfg-row">
+        <span>Début</span>
+        <span class="mono" style="color:var(--ink)">{{ sub.start_date[:10] if sub.start_date else '—' }}</span>
       </div>
     </div>
     <div style="display:flex;gap:.6rem;margin-top:1.1rem;flex-wrap:wrap">
       {% if sub.provisioned %}
-      <a href="{{ url_for('mikrotik_script') }}" class="btn btn-primary btn-sm">📋 Voir le script</a>
+      <a href="{{ url_for('mikrotik_script') }}" class="btn btn-primary btn-sm">Voir le script</a>
       {% endif %}
-      <a href="{{ url_for('configure') }}" class="btn btn-outline btn-sm">✏️ Modifier</a>
-      <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" class="btn btn-outline btn-sm">🔄 Renouveler</a>
+      <a href="{{ url_for('configure') }}" class="btn btn-outline btn-sm">Modifier</a>
+      <a href="{{ url_for('subscribe') }}?plan={{ sub.plan }}" class="btn btn-outline btn-sm">Renouveler</a>
     </div>
   </div>
 </div>
@@ -391,14 +421,12 @@
 <!-- Modal suppression -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal-box">
-    <div style="font-size:2rem;margin-bottom:.7rem">⚠️</div>
-    <div style="font-family:var(--fh);font-size:1.15rem;font-weight:700;margin-bottom:.5rem">Supprimer ce routeur ?</div>
-    <p style="font-size:.86rem;color:var(--dim);line-height:1.6;margin-bottom:1rem">
-      Vous êtes sur le point de supprimer <strong id="deleteDeviceName" style="color:var(--ink)"></strong>.<br><br>
-      <strong style="color:#991b1b">⚠️ Aucun remboursement ne sera effectué.</strong>
+    <div style="font-family:var(--fh);font-size:1.1rem;font-weight:600;margin-bottom:.5rem">Supprimer ce routeur ?</div>
+    <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">
+      Vous êtes sur le point de supprimer <strong id="deleteDeviceName" style="color:var(--ink)"></strong>.
     </p>
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.75rem 1rem;font-size:.82rem;color:#991b1b;margin-bottom:1.2rem">
-      Cette action est <strong>irréversible</strong>.
+    <div style="background:#FCF3F2;border:1px solid #EFD2CF;border-radius:8px;padding:.75rem 1rem;font-size:.81rem;color:#8C1D18;margin-bottom:1.2rem;line-height:1.5">
+      Cette action est <strong>irréversible</strong>. Aucun remboursement ne sera effectué.
     </div>
     <form id="deleteForm" method="POST">
       {{ csrf_field() }}
@@ -423,7 +451,6 @@ function showTab(name) {
   document.getElementById('panel-' + name).classList.add('active')
   localStorage.setItem('dash_tab', name)
 }
-// Restaurer le tab
 const savedTab = localStorage.getItem('dash_tab')
 if(savedTab && document.getElementById('tab-btn-' + savedTab)) showTab(savedTab)
 
@@ -448,8 +475,8 @@ setTimeout(() => {
     if(d && d.last_seen){
       const dt = new Date(d.last_seen)
       const diff = Math.floor((new Date() - dt) / 60000)
-      let label = diff < 1 ? '● À l\'instant' : diff < 60 ? `${diff} min` : diff < 1440 ? `${Math.floor(diff/60)}h` : `${Math.floor(diff/1440)}j`
-      if(val) { val.textContent = label; val.style.color = diff < 60 ? '#22c55e' : diff < 1440 ? '#f59e0b' : 'var(--dim)' }
+      let label = diff < 1 ? "À l'instant" : diff < 60 ? `${diff} min` : diff < 1440 ? `${Math.floor(diff/60)} h` : `${Math.floor(diff/1440)} j`
+      if(val) { val.textContent = label; val.style.color = diff < 60 ? 'var(--green)' : diff < 1440 ? 'var(--amber)' : 'var(--muted)' }
       if(sub && d.seller) sub.textContent = `Vendeur : ${d.seller}`
     } else {
       if(val) val.textContent = 'Aucune vente'
@@ -470,8 +497,8 @@ document.getElementById('deleteModal')?.addEventListener('click', function(e) {
   if(e.target === this) closeDeleteModal()
 })
 
-// ── Stats ventes ──────────────────────────────────────────────
-function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f') }
+// ── Stats ventes ──
+function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
 
 async function loadStats() {
   try {
@@ -485,85 +512,146 @@ async function loadStats() {
     if(!list) return
     const sellers = (d.sellers || []).filter(s => s.sales > 0)
     if(!sellers.length) {
-      list.innerHTML = '<div style="color:var(--dim);font-size:.83rem;text-align:center;padding:.8rem">Aucune vente aujourd\'hui</div>'
+      list.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:.8rem">Aucune vente aujourd\'hui</div>'
       return
     }
     const maxRev = Math.max(...sellers.map(s => s.revenue || 0), 1)
-    const medals = ['🥇','🥈','🥉']
     list.innerHTML = sellers.map((s, i) => {
       const pct = Math.round((s.revenue||0)/maxRev*100)
-      return '<div style="display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;background:#f8f9ff;border-radius:8px">'
-        + '<span style="font-size:.9rem;flex-shrink:0">' + (medals[i]||'·') + '</span>'
+      return '<div style="display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;background:var(--bg);border-radius:7px">'
+        + '<span class="mono" style="font-size:.72rem;color:var(--muted);flex-shrink:0;width:1.4rem;text-align:right">' + (i+1) + '.</span>'
         + '<div style="flex:1;min-width:0">'
-        + '<div style="font-size:.82rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (s.seller||'?') + '</div>'
-        + '<div style="height:5px;background:#e5e7eb;border-radius:10px;margin-top:.3rem">'
-        + '<div style="height:5px;background:var(--accent);border-radius:10px;width:' + pct + '%;transition:width .6s ease"></div>'
+        + '<div style="font-size:.81rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (s.seller||'?') + '</div>'
+        + '<div style="height:4px;background:var(--border);border-radius:10px;margin-top:.3rem">'
+        + '<div style="height:4px;background:var(--navy);border-radius:10px;width:' + pct + '%;transition:width .6s ease"></div>'
         + '</div></div>'
         + '<div style="text-align:right;flex-shrink:0">'
-        + '<div style="font-size:.8rem;font-weight:700;color:var(--ink)">' + (s.sales||0) + ' tickets</div>'
-        + '<div style="font-size:.72rem;color:var(--dim)">' + fmtNum(s.revenue||0) + ' FCFA</div>'
+        + '<div style="font-size:.79rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums">' + (s.sales||0) + ' tickets</div>'
+        + '<div class="mono" style="font-size:.7rem;color:var(--muted)">' + fmtNum(s.revenue||0) + ' FCFA</div>'
         + '</div></div>'
     }).join('')
   } catch(e) { console.log('Stats error:', e) }
 }
 
-async function loadWeekChart() {
+// ── Graphe revenus 7 jours : barres animées, tooltip au survol ──
+// Robuste à l'onglet masqué : on (re)dessine via ResizeObserver dès que le
+// canvas a une largeur réelle -> plus de bitmap 0px étiré par le CSS.
+;(function(){
   const canvas = document.getElementById('revenueChart')
   if(!canvas) return
-  try {
-    const r = await fetch('/api/stats/week')
-    const d = await r.json()
-    const days = d.days || []
-    if(!days.length) return
-    const labels = days.map(function(day) {
-      const dt = new Date(day.date)
-      return dt.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric'})
-    })
-    const revenues = days.map(function(day){ return day.revenue||0 })
-    const maxRev = Math.max.apply(null, revenues.concat([1]))
+  const tip = document.getElementById('chartTip')
+  const H = 172
+  let data = null, maxRev = 1, bars = [], drawn = false
+
+  function fmtK(v){ return v>=1000 ? (v/1000).toFixed(v>=10000?0:1)+'k' : String(v) }
+
+  function roundTop(ctx,x,y,w,h,r){
+    r = Math.max(0, Math.min(r, w/2, h))
+    ctx.beginPath()
+    ctx.moveTo(x, y+h)
+    ctx.lineTo(x, y+r)
+    ctx.quadraticCurveTo(x, y, x+r, y)
+    ctx.lineTo(x+w-r, y)
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r)
+    ctx.lineTo(x+w, y+h)
+    ctx.closePath()
+  }
+
+  function draw(progress){
+    const W = canvas.clientWidth
+    if(W <= 0 || !data) return
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = W*dpr; canvas.height = H*dpr
     const ctx = canvas.getContext('2d')
-    const W = canvas.offsetWidth || 300
-    const H = 160
-    canvas.width = W * window.devicePixelRatio
-    canvas.height = H * window.devicePixelRatio
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
-    const PAD = {top:10, right:10, bottom:30, left:50}
-    const cW = W - PAD.left - PAD.right
-    const cH = H - PAD.top - PAD.bottom
-    const gap = cW / days.length
-    const barW = Math.floor(gap * 0.55)
-    ctx.clearRect(0, 0, W, H)
-    for(let i=0; i<=4; i++) {
-      const y = PAD.top + cH - (cH/4*i)
-      ctx.strokeStyle = 'rgba(10,10,18,.06)'; ctx.lineWidth = 1
-      ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W-PAD.right, y); ctx.stroke()
-      const val = Math.round(maxRev/4*i)
-      ctx.fillStyle = 'rgba(10,10,18,.35)'; ctx.font = '10px system-ui'; ctx.textAlign = 'right'
-      ctx.fillText(val>=1000 ? (val/1000).toFixed(1)+'k' : val, PAD.left-4, y+3)
+    ctx.setTransform(dpr,0,0,dpr,0,0)
+    ctx.clearRect(0,0,W,H)
+    const PAD = {top:12, right:10, bottom:26, left:42}
+    const cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom
+    ctx.textBaseline = 'middle'
+    for(let i=0;i<=4;i++){
+      const y = PAD.top + cH - cH/4*i
+      ctx.strokeStyle = 'rgba(19,23,32,.07)'; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(W-PAD.right,y); ctx.stroke()
+      ctx.fillStyle = 'rgba(19,23,32,.38)'; ctx.font = '10px "JetBrains Mono", monospace'; ctx.textAlign = 'right'
+      ctx.fillText(fmtK(Math.round(maxRev/4*i)), PAD.left-8, y)
     }
-    days.forEach(function(day, i) {
-      const barH = Math.max((day.revenue||0)/maxRev*cH, 2)
-      const x = PAD.left + gap*i + gap/2 - barW/2
-      const y = PAD.top + cH - barH
-      const isToday = i === days.length-1
-      const grad = ctx.createLinearGradient(0, y, 0, PAD.top+cH)
-      grad.addColorStop(0, isToday ? '#ff4d1c' : '#3b82f6')
-      grad.addColorStop(1, isToday ? 'rgba(255,77,28,.15)' : 'rgba(59,130,246,.15)')
-      ctx.fillStyle = grad
-      ctx.beginPath()
-      ctx.rect(x, y, barW, barH)
-      ctx.fill()
-      ctx.fillStyle = isToday ? '#ff4d1c' : 'rgba(10,10,18,.45)'
-      ctx.font = isToday ? 'bold 10px system-ui' : '10px system-ui'
-      ctx.textAlign = 'center'
-      ctx.fillText(labels[i], PAD.left + gap*i + gap/2, H-6)
+    const n = data.length, slot = cW/n, bw = Math.min(30, slot*0.52)
+    bars = []
+    data.forEach(function(d,i){
+      const full = Math.max((d.revenue||0)/maxRev*cH, 0)
+      const bh = full*progress
+      const x = PAD.left + slot*i + slot/2 - bw/2
+      const today = i === n-1
+      ctx.fillStyle = today ? '#C2410C' : '#12263A'
+      ctx.globalAlpha = today ? 1 : .82
+      roundTop(ctx, x, PAD.top+cH-bh, bw, bh, 4)
+      ctx.fill(); ctx.globalAlpha = 1
+      ctx.fillStyle = today ? '#C2410C' : 'rgba(19,23,32,.5)'
+      ctx.font = (today?'600 ':'')+'10px "Public Sans", sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'
+      ctx.fillText(d.label, PAD.left+slot*i+slot/2, H-8)
+      ctx.textBaseline = 'middle'
+      bars.push({x:x-3, w:bw+6, top:PAD.top+cH-full, d:d})
     })
-  } catch(e) { console.log('Chart error:', e) }
-}
+  }
+
+  function animate(){
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ draw(1); return }
+    const dur = 850; let t0 = null
+    function tick(t){
+      if(t0===null) t0 = t
+      const p = Math.min(1, (t-t0)/dur)
+      draw(1-Math.pow(1-p,3))
+      if(p<1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
+
+  if(tip){
+    canvas.addEventListener('mousemove', function(ev){
+      if(!bars.length) return
+      const r = canvas.getBoundingClientRect()
+      const mx = ev.clientX-r.left, my = ev.clientY-r.top
+      const hit = bars.find(function(b){ return mx>=b.x && mx<=b.x+b.w && my>=b.top-6 })
+      if(hit){
+        tip.style.opacity = 1
+        tip.style.left = (hit.x + hit.w/2) + 'px'
+        tip.style.top = (hit.top - 6) + 'px'
+        tip.innerHTML = '<div style="font-weight:600;text-transform:capitalize">'+hit.d.full+'</div>'
+          + '<div>'+fmtNum(hit.d.revenue||0)+' FCFA</div>'
+      } else { tip.style.opacity = 0 }
+    })
+    canvas.addEventListener('mouseleave', function(){ tip.style.opacity = 0 })
+  }
+
+  async function load(){
+    try{
+      const r = await fetch('/api/stats/week')
+      const d = await r.json()
+      const days = d.days || []
+      if(!days.length) return
+      data = days.map(function(day){
+        const dt = new Date(day.date)
+        return {revenue:day.revenue||0,
+                label:dt.toLocaleDateString('fr-FR',{weekday:'short'}),
+                full:dt.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}
+      })
+      maxRev = Math.max.apply(null, data.map(function(x){return x.revenue}).concat([1]))
+      if(canvas.clientWidth > 0){ animate(); drawn = true }
+    }catch(e){ console.log('Chart error:', e) }
+  }
+
+  if('ResizeObserver' in window){
+    new ResizeObserver(function(){
+      if(!data || canvas.clientWidth <= 0) return
+      if(!drawn){ animate(); drawn = true } else { draw(1) }
+    }).observe(canvas)
+  }
+  load()
+})()
 
 if(document.getElementById('stat-total-sales')) {
   loadStats()
-  loadWeekChart()
   setInterval(loadStats, 60000)
 }
 </script>

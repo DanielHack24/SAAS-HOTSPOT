@@ -3,115 +3,135 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Connexion — HotspotPro</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23ff4d1c'/><path d='M8 16.5a10 10 0 0 1 16 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><path d='M11 19.5a6 6 0 0 1 10 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><circle cx='16' cy='23' r='1.5' fill='white'/></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23122639'/><path d='M8 16.5a10 10 0 0 1 16 0' stroke='%23E8630A' stroke-width='2.2' stroke-linecap='round' fill='none'/><path d='M11 19.5a6 6 0 0 1 10 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><circle cx='16' cy='23' r='1.5' fill='white'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --accent:#ff4d1c;--ink:#0a0a12;--dim:#6b6b7a;--paper:#f4f1eb;
-  --gold:#f5a623;--border:rgba(10,10,18,.12);--green:#22c55e;
-  --fh:'Times New Roman','Times',Georgia,serif;
-  --fb:Arial,'Helvetica Neue',Helvetica,sans-serif
+  --bg:#F4F5F7;--surface:#fff;--ink:#131720;--muted:#5B6472;--border:#E3E6EA;
+  --navy:#12263A;--panel:#0E1B29;--accent:#C2410C;--accent-h:#9A3412;--green:#15803D;
+  --fh:'Archivo','Segoe UI',Arial,sans-serif;
+  --fb:'Public Sans','Segoe UI',Arial,sans-serif;
+  --fm:'JetBrains Mono',Consolas,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{height:100%}body{height:100%}
-body{font-family:var(--fb);min-height:100vh;height:100vh;display:grid;grid-template-columns:1fr 1fr;background:var(--paper);-webkit-font-smoothing:antialiased;overflow:hidden}
-.left{background:var(--ink);display:flex;flex-direction:column;justify-content:center;padding:3.5rem;position:relative;overflow:hidden;min-height:100vh}
-.left::before{content:'';position:absolute;top:-10%;right:-8%;width:60%;height:60%;background:radial-gradient(ellipse,rgba(255,77,28,.22) 0%,transparent 65%);border-radius:50%;pointer-events:none;animation:orbFloat 8s ease-in-out infinite}
-.left::after{content:'';position:absolute;bottom:-15%;left:-5%;width:50%;height:50%;background:radial-gradient(ellipse,rgba(245,166,35,.1) 0%,transparent 65%);border-radius:50%;pointer-events:none;animation:orbFloat 10s ease-in-out infinite reverse}
-@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(2%,3%) scale(1.05)}}
-.brand{font-family:var(--fh);font-size:1.35rem;font-weight:700;font-style:italic;color:#fff;letter-spacing:-.01em;margin-bottom:2.8rem;text-decoration:none;display:flex;align-items:center;gap:.55rem;position:relative;z-index:2}
-.brand-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 12px rgba(255,77,28,.4)}
-.brand span{color:var(--accent);font-style:normal}
-.left-content{position:relative;z-index:2}
-.left h2{font-family:var(--fh);font-size:clamp(1.6rem,2.5vw,2.3rem);font-weight:700;font-style:italic;color:#fff;line-height:1.15;letter-spacing:-.02em;margin-bottom:.7rem}
-.left h2 em{font-style:normal;color:var(--accent)}
-.left-sub{color:rgba(255,255,255,.4);font-size:.9rem;line-height:1.65;margin-bottom:2.2rem}
-.perks{list-style:none;display:flex;flex-direction:column;gap:.75rem}
-.perks li{color:rgba(255,255,255,.65);font-size:.875rem;display:flex;align-items:center;gap:.65rem;opacity:0;transform:translateX(-14px);animation:slideInLeft .5s ease forwards}
-.perks li:nth-child(1){animation-delay:.2s}
-.perks li:nth-child(2){animation-delay:.35s}
-.perks li:nth-child(3){animation-delay:.5s}
-.perks li:nth-child(4){animation-delay:.65s}
-@keyframes slideInLeft{to{opacity:1;transform:none}}
-.perk-dot{width:26px;height:26px;background:rgba(255,77,28,.18);border:1px solid rgba(255,77,28,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem}
-.stat-bar{display:flex;gap:1.8rem;margin-top:2.8rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.08);position:relative;z-index:2}
-.stat-val{font-family:var(--fh);font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-.02em}
-.stat-val span{color:var(--accent)}
-.stat-lab{font-size:.68rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:.1rem}
-.right{display:flex;align-items:center;justify-content:center;padding:3rem 2rem;overflow-y:auto;background:var(--paper);min-height:100vh}
-.form-box{width:100%;max-width:400px;opacity:0;transform:translateY(16px);animation:fadeUp .55s .1s ease forwards}
-@keyframes fadeUp{to{opacity:1;transform:none}}
-.form-header{margin-bottom:1.8rem}
-.form-header h1{font-family:var(--fh);font-size:clamp(1.7rem,2.6vw,2.1rem);font-weight:700;font-style:italic;letter-spacing:-.02em;margin-bottom:.35rem}
-.form-header p{color:var(--dim);font-size:.88rem;line-height:1.55}
-.fg{margin-bottom:1rem;position:relative}
-label{display:block;font-size:.78rem;font-weight:bold;margin-bottom:.32rem;color:var(--ink)}
+body{font-family:var(--fb);min-height:100vh;display:grid;grid-template-columns:5fr 7fr;background:var(--bg);-webkit-font-smoothing:antialiased}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+
+/* ── PANNEAU GAUCHE ── */
+.left{background:var(--panel);display:flex;flex-direction:column;justify-content:space-between;padding:2.8rem;min-height:100vh;border-right:1px solid rgba(255,255,255,.06)}
+.brand{font-family:var(--fh);font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:-.01em;text-decoration:none;display:flex;align-items:center;gap:.55rem}
+.brand-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand span{color:#E8874C}
+.left-content h2{font-family:var(--fh);font-size:clamp(1.4rem,2.2vw,1.9rem);font-weight:700;color:#fff;line-height:1.25;letter-spacing:-.02em;margin-bottom:.8rem;max-width:20ch}
+.left-sub{color:rgba(255,255,255,.5);font-size:.86rem;line-height:1.7;max-width:38ch;margin-bottom:2rem}
+.perks{list-style:none;display:flex;flex-direction:column;gap:.1rem}
+.perks li{color:rgba(255,255,255,.65);font-size:.83rem;display:flex;align-items:center;gap:.7rem;padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.perks li:last-child{border-bottom:none}
+.perks svg{color:#E8874C;flex-shrink:0}
+.left-foot{display:flex;gap:2rem;padding-top:1.4rem;border-top:1px solid rgba(255,255,255,.08)}
+.lf-val{font-family:var(--fh);font-size:1.15rem;font-weight:700;color:#fff;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.lf-lab{font-size:.62rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.09em;margin-top:.15rem;font-weight:600}
+
+/* ── FORMULAIRE ── */
+.right{display:flex;align-items:center;justify-content:center;padding:3rem 2rem;overflow-y:auto;min-height:100vh}
+.form-box{width:100%;max-width:390px}
+.form-header{margin-bottom:1.7rem}
+.form-header h1{font-family:var(--fh);font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.35rem;color:var(--ink)}
+.form-header p{color:var(--muted);font-size:.86rem;line-height:1.55}
+.fg{margin-bottom:1rem}
+label{display:block;font-size:.76rem;font-weight:600;margin-bottom:.32rem;color:var(--ink)}
 .input-wrap{position:relative}
-.input-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--dim);font-size:.88rem;pointer-events:none}
-input[type=email],input[type=password],input[type=text],input[type=tel]{width:100%;padding:.7rem .85rem .7rem 2.4rem;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;font-family:var(--fb);color:var(--ink);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none}
-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,77,28,.1)}
-.submit{width:100%;padding:.78rem;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:.95rem;font-weight:bold;cursor:pointer;font-family:var(--fb);transition:background .2s,transform .15s,box-shadow .2s;margin-top:.5rem;box-shadow:0 4px 16px rgba(255,77,28,.28);display:flex;align-items:center;justify-content:center;gap:.5rem}
-.submit:hover{background:#e03a10;transform:translateY(-1px);box-shadow:0 6px 22px rgba(255,77,28,.38)}
-.submit:active{transform:translateY(0)}
-.submit svg{transition:transform .2s}
-.submit:hover svg{transform:translateX(3px)}
-.trust-row{display:flex;gap:.55rem;margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid var(--border)}
-.trust-item{flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:.55rem .6rem;display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--dim);line-height:1.3}
-.trust-item strong{color:var(--ink);display:block;font-size:.76rem}
-.form-foot{text-align:center;margin-top:1.2rem;font-size:.85rem;color:var(--dim)}
-.form-foot a{color:var(--accent);text-decoration:none;font-weight:bold}
+input[type=email],input[type=password],input[type=text],input[type=tel]{width:100%;padding:.62rem .8rem;border:1px solid var(--border);border-radius:8px;font-size:.88rem;font-family:var(--fb);color:var(--ink);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none}
+input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,38,58,.08)}
+.submit{width:100%;padding:.72rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--fb);transition:background .15s;margin-top:.4rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.submit:hover{background:var(--accent-h)}
+.submit:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.form-foot{text-align:center;margin-top:1.3rem;font-size:.84rem;color:var(--muted)}
+.form-foot a{color:var(--accent);text-decoration:none;font-weight:600}
 .form-foot a:hover{text-decoration:underline}
 .flashes{margin-bottom:1rem}
-.flash{padding:.6rem .95rem;border-radius:8px;font-size:.83rem;margin-bottom:.35rem;animation:flashIn .3s ease}
-@keyframes flashIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
-.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
-.flash.warning{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
-.eye-btn{position:absolute;right:.85rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--dim);font-size:.82rem;padding:0;line-height:1}
-@media(max-width:700px){body{grid-template-columns:1fr;overflow:auto}.left{display:none}.right{padding:2.5rem 1.5rem;min-height:100vh}}
+.flash{padding:.6rem .95rem;border-radius:8px;font-size:.82rem;margin-bottom:.35rem;border:1px solid;background:var(--surface);line-height:1.45}
+.flash.error{border-color:#EFD2CF;color:#8C1D18}
+.flash.success{border-color:#CDE5D4;color:#175C33}
+.flash.warning{border-color:#EBDCC3;color:#7C4A0B}
+.flash.info{border-color:#D3DEF2;color:#1E3C77}
+.eye-btn{position:absolute;right:.8rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:0;line-height:1;display:flex}
+.forgot-link{font-weight:500;font-size:.72rem;color:var(--accent);text-decoration:none}
+.forgot-link:hover{text-decoration:underline}
+.trust{display:flex;gap:1.2rem;justify-content:center;margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid var(--border)}
+.trust span{font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:.35rem}
+
+/* ── ANIMATIONS ── */
+.left{position:relative;overflow:hidden}
+.brand,.left-content,.left-foot{position:relative;z-index:2}
+.left-glow{position:absolute;z-index:0;top:-18%;left:-22%;width:75%;height:65%;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(194,65,12,.34),transparent 65%);
+  filter:blur(22px);animation:glowDrift 12s ease-in-out infinite}
+.left-rings{position:absolute;z-index:0;bottom:6%;right:-70px;width:340px;height:340px;pointer-events:none}
+.left-rings span{position:absolute;inset:0;margin:auto;width:120px;height:120px;border-radius:50%;
+  border:1.5px solid rgba(232,135,76,.45);animation:ringPulse 4.2s ease-out infinite}
+.left-rings span:nth-child(2){animation-delay:1.4s}
+.left-rings span:nth-child(3){animation-delay:2.8s}
+@keyframes glowDrift{0%,100%{transform:translate(0,0) scale(1);opacity:.55}50%{transform:translate(4%,-5%) scale(1.1);opacity:.85}}
+@keyframes ringPulse{0%{transform:scale(.35);opacity:.6}80%{opacity:0}100%{transform:scale(1.5);opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.anim{opacity:0;animation:fadeUp .7s cubic-bezier(.22,1,.36,1) forwards}
+.a1{animation-delay:.05s}.a2{animation-delay:.14s}.a3{animation-delay:.23s}.a4{animation-delay:.32s}
+.a5{animation-delay:.41s}.a6{animation-delay:.50s}.a7{animation-delay:.59s}.a8{animation-delay:.70s}
+.perks li{transition:color .2s,transform .2s,padding-left .2s}
+.perks li:hover{color:#fff;transform:translateX(5px);padding-left:.4rem}
+.perks li:hover svg{color:#fff}
+.form-box{animation:fadeUp .6s .18s cubic-bezier(.22,1,.36,1) both}
+.submit{position:relative;overflow:hidden}
+.submit::after{content:'';position:absolute;top:0;left:-60%;width:45%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:skewX(-18deg)}
+.submit:hover::after{animation:sheen .85s ease}
+@keyframes sheen{to{left:130%}}
+@media (prefers-reduced-motion: reduce){
+  .anim,.form-box{opacity:1 !important;transform:none !important}
+  .left-glow,.left-rings{display:none}
+}
+
+@media(max-width:800px){body{grid-template-columns:1fr;overflow:auto}.left{display:none}.right{padding:2.5rem 1.5rem;min-height:100vh}}
 </style>
 </head>
 <body>
 <div class="left">
-  <a href="{{ logo_url() }}" class="brand">
+  <div class="left-glow"></div>
+  <div class="left-rings"><span></span><span></span><span></span></div>
+  <a href="{{ logo_url() }}" class="brand anim a1">
     <span class="brand-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/>
-        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/>
       </svg>
     </span>
     Hotspot<span>Pro</span>
   </a>
   <div class="left-content">
-    <h2>Vos ventes,<br>trackées <em>automatiquement</em><br>sur Telegram.</h2>
-    <p class="left-sub">Plateforme de comptabilité pour opérateurs hotspot MikroTik au Togo. Simple, rapide, fiable.</p>
+    <h2 class="anim a2">La comptabilité de votre hotspot, automatisée.</h2>
+    <p class="left-sub anim a3">Plateforme de gestion pour opérateurs hotspot MikroTik de l'Afrique de l'Ouest. Chaque vente est suivie, attribuée et notifiée en temps réel.</p>
     <ul class="perks">
-      <li><span class="perk-dot">📡</span> Bot Telegram dédié pour chaque opérateur</li>
-      <li><span class="perk-dot">📊</span> Stats en temps réel par vendeur</li>
-      <li><span class="perk-dot">⚙️</span> Script MikroTik généré automatiquement</li>
-      <li><span class="perk-dot">⚡</span> Déploiement en moins de 5 minutes</li>
+      <li class="anim a4"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Bot Telegram dédié pour chaque opérateur</li>
+      <li class="anim a5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Statistiques par vendeur en temps réel</li>
+      <li class="anim a6"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Script RouterOS généré automatiquement</li>
+      <li class="anim a7"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Déploiement en moins de 5 minutes</li>
     </ul>
-    <div class="stat-bar">
-      <div class="stat-item">
-        <div class="stat-val">50<span>+</span></div>
-        <div class="stat-lab">Opérateurs actifs</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-val">99<span>%</span></div>
-        <div class="stat-lab">Uptime garanti</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-val">&lt;5<span>min</span></div>
-        <div class="stat-lab">Pour démarrer</div>
-      </div>
-    </div>
+  </div>
+  <div class="left-foot anim a8">
+    <div><div class="lf-val"><span class="cup" data-to="50">0</span>+</div><div class="lf-lab">Opérateurs</div></div>
+    <div><div class="lf-val"><span class="cup" data-to="99">0</span>%</div><div class="lf-lab">Disponibilité</div></div>
+    <div><div class="lf-val">&lt;5 min</div><div class="lf-lab">Mise en route</div></div>
   </div>
 </div>
 
 <div class="right">
   <div class="form-box">
     <div class="form-header">
-      <h1>Bon retour 👋</h1>
-      <p>Connectez-vous à votre espace HotspotPro</p>
+      <h1>Connexion</h1>
+      <p>Accédez à votre espace HotspotPro.</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -125,35 +145,48 @@ input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,77,28,.1)}
     <form method="POST">
       {{ csrf_field() }}
       <div class="fg">
-        <label>Adresse email</label>
-        <div class="input-wrap">
-          <span class="input-icon">✉</span>
-          <input type="email" name="email" placeholder="vous@exemple.com" required autocomplete="email">
-        </div>
+        <label for="emailInput">Adresse email</label>
+        <input type="email" id="emailInput" name="email" placeholder="vous@exemple.com" required autocomplete="email">
       </div>
       <div class="fg">
-        <label>Mot de passe</label>
+        <label for="pwdInput" style="display:flex;justify-content:space-between;align-items:baseline">Mot de passe
+          <a href="{{ url_for('forgot_password') }}" class="forgot-link">Mot de passe oublié ?</a>
+        </label>
         <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" name="password" id="pwdInput" placeholder="••••••••" required autocomplete="current-password">
-          <button type="button" class="eye-btn" onclick="togglePwd()" title="Afficher/masquer">👁</button>
+          <input type="password" name="password" id="pwdInput" placeholder="Votre mot de passe" required autocomplete="current-password">
+          <button type="button" class="eye-btn" onclick="togglePwd()" aria-label="Afficher ou masquer le mot de passe">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
         </div>
       </div>
-      <button type="submit" class="submit">
-        Se connecter
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </button>
+      <button type="submit" class="submit">Se connecter</button>
     </form>
 
-    <div class="trust-row">
-      <div class="trust-item">🔐 <div><strong>Sécurisé</strong>HTTPS chiffré</div></div>
-      <div class="trust-item">💳 <div><strong>Paiement</strong>Via FedaPay</div></div>
-      <div class="trust-item">⚡ <div><strong>Rapide</strong>Accès instantané</div></div>
-    </div>
+    <div class="form-foot">Pas encore de compte ? <a href="{{ url_for('register') }}">Créer un compte</a></div>
 
-    <div class="form-foot">Pas encore de compte ? <a href="{{ url_for('register') }}">Créer un compte →</a></div>
+    <div class="trust">
+      <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Connexion chiffrée</span>
+      <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Paiement FedaPay</span>
+    </div>
   </div>
 </div>
-<script>function togglePwd(){const i=document.getElementById('pwdInput');i.type=i.type==='password'?'text':'password'}</script>
+<script>
+function togglePwd(){const i=document.getElementById('pwdInput');i.type=i.type==='password'?'text':'password'}
+// Compteurs animés des statistiques (respecte prefers-reduced-motion)
+;(function(){
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.querySelectorAll('.cup').forEach(function(el){
+    const to = parseInt(el.dataset.to||'0',10)
+    if(reduce){ el.textContent = to; return }
+    const dur = 1100, t0 = performance.now()
+    function tick(t){
+      const p = Math.min(1,(t-t0)/dur)
+      el.textContent = Math.round(to*(1-Math.pow(1-p,3)))
+      if(p<1) requestAnimationFrame(tick)
+    }
+    setTimeout(function(){ requestAnimationFrame(tick) }, 700)
+  })
+})()
+</script>
 </body>
 </html>

@@ -2,9 +2,9 @@
 routes_client.py — Espace client : dashboard, configuration, scripts
 MikroTik, compte, routeurs supplémentaires
 """
-import re, json, secrets
+import re, json, secrets, ipaddress
 
-from flask import render_template, request, redirect, url_for, session, flash
+from flask import render_template, request, redirect, url_for, session, flash, jsonify, Response
 
 import config
 import fedapay
@@ -19,6 +19,20 @@ from security import login_required, hash_password, verify_password
 
 def current_client():
     return get_client(session["client_id"])
+
+
+# Couleurs d'avatar proposées (validées côté serveur)
+AVATAR_COLORS = ["#12263A", "#C2410C", "#15803D", "#1D4ED8",
+                 "#7C3AED", "#B45309", "#0E7490", "#BE185D"]
+
+
+def is_valid_ip(value: str) -> bool:
+    """Validation stricte d'une IPv4 (la regex \\d{1,3} acceptait 999.999.999.999)."""
+    try:
+        ipaddress.IPv4Address(value)
+        return True
+    except ValueError:
+        return False
 
 
 # ═══════════════════════════════════════════════
@@ -111,7 +125,7 @@ def configure():
             errors.append("Format du token Telegram invalide. Ex: 123456789:AAGQ...")
         if not re.match(r"^-?\d+$", chat_id):
             errors.append("Chat ID invalide (nombre entier requis).")
-        if mikrotik_ip and not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", mikrotik_ip):
+        if mikrotik_ip and not is_valid_ip(mikrotik_ip):
             errors.append("Adresse IP MikroTik invalide (laisser vide si derrière NAT/pare-feu).")
 
         if errors:
@@ -149,13 +163,13 @@ def configure():
                                    "router_token": router_token})
                 core.provision_tenant(tenant, config.get_vps_ip(), prices=prices)
                 _mark_provisioned(sub["id"])
-                flash("🎉 Votre système a été déployé avec succès !", "success")
+                flash("Votre système a été déployé avec succès.", "success")
             except Exception as e:
                 flash(f"Erreur de déploiement : {e}", "error")
                 return render_template("configure.html", sub=sub)
         else:
             _mark_provisioned(sub["id"])
-            flash("✅ Configuration enregistrée.", "success")
+            flash("Configuration enregistrée.", "success")
 
         return redirect(url_for("mikrotik_script"))
 
@@ -167,6 +181,109 @@ def _mark_provisioned(sub_id: int):
     conn.execute("UPDATE subscriptions SET provisioned=1 WHERE id=?", (sub_id,))
     conn.commit()
     conn.close()
+
+
+def _reserve_slug(client: dict, sub: dict):
+    """Réserve slug + router_token sur l'abonnement SANS provisionner le hub.
+    Permet de monter le tunnel WireGuard avant l'étape des profils (pour lire
+    les profils réels du routeur). Idempotent."""
+    slug  = sub.get("slug")
+    token = sub.get("router_token")
+    if slug and token:
+        return slug, token
+    slug  = slug  or services.make_slug(client["full_name"], str(sub["id"]))
+    token = token or secrets.token_urlsafe(24)
+    conn = get_db()
+    conn.execute("UPDATE subscriptions SET slug=?, router_token=? WHERE id=?",
+                 (slug, token, sub["id"]))
+    conn.commit()
+    conn.close()
+    return slug, token
+
+
+def _tunnel_client(slug: str):
+    """Retourne (RouterOSRest prêt, module routeros) pour un tenant, ou
+    (None, reason) si indisponible. Le tunnel WireGuard doit être provisionné."""
+    try:
+        import wg_store
+        import routeros as ros
+    except Exception:
+        return None, "unavailable"
+    peer = wg_store.get_peer(slug)
+    if not peer:
+        return None, "no_peer"
+    return ros.RouterOSRest(peer["tunnel_ip"], peer["api_user"], peer["api_pass"]), ros
+
+
+@app.route("/configure/tunnel", methods=["POST"])
+@login_required
+def configure_tunnel():
+    """Prépare le tunnel WireGuard pendant l'onboarding : réserve le slug et
+    renvoie le bloc de configuration à coller sur le routeur."""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub:
+        return jsonify({"ready": False, "reason": "no_sub"}), 400
+    slug, _ = _reserve_slug(client, sub)
+    try:
+        import wg_store
+        if wg_store.get_server() is None:
+            return jsonify({"ready": False, "reason": "wg_not_ready"})
+        block = wg_store.provision_peer(slug)["block"]
+        return jsonify({"ready": True, "block": block})
+    except Exception as e:
+        return jsonify({"ready": False, "reason": "unavailable", "error": str(e)})
+
+
+@app.route("/configure/tunnel/status")
+@login_required
+def configure_tunnel_status():
+    """Ping du routeur à travers le tunnel : le client a-t-il collé le bloc ?"""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        return jsonify({"online": False, "reason": "no_peer"})
+    rest, ros = _tunnel_client(sub["slug"])
+    if rest is None:
+        return jsonify({"online": False, "reason": ros})
+    try:
+        rest.ping()
+        return jsonify({"online": True})
+    except ros.RouterUnreachable:
+        return jsonify({"online": False, "reason": "offline"})
+    except ros.RouterOSAuthError:
+        return jsonify({"online": False, "reason": "auth"})
+    except Exception as e:
+        return jsonify({"online": False, "reason": "error", "error": str(e)})
+
+
+@app.route("/configure/router-profiles")
+@login_required
+def configure_router_profiles():
+    """Lit les profils réels du User Manager du routeur, pour pré-remplir
+    l'étape des profils avec des noms garantis exacts."""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        return jsonify({"ok": False, "reason": "no_peer"})
+    rest, ros = _tunnel_client(sub["slug"])
+    if rest is None:
+        return jsonify({"ok": False, "reason": ros})
+    try:
+        raw = rest.get("/ip/hotspot/user/profile")
+    except ros.RouterUnreachable:
+        return jsonify({"ok": False, "reason": "offline"})
+    except ros.RouterOSAuthError:
+        return jsonify({"ok": False, "reason": "auth"})
+    except Exception as e:
+        return jsonify({"ok": False, "reason": "error", "error": str(e)})
+    profiles = []
+    for p in (raw or []):
+        name = p.get("name")
+        # On exclut « default » (profil système d'essai, jamais vendu).
+        if name and name != "default":
+            profiles.append({"name": name, "validity": ""})
+    return jsonify({"ok": True, "profiles": profiles})
 
 
 # ═══════════════════════════════════════════════
@@ -186,6 +303,39 @@ def _profiles_from_sub(sub: dict) -> dict:
     except Exception:
         profiles = {}
     return profiles
+
+
+@app.route("/aide/routeros-7")
+@login_required
+def routeros_update_guide():
+    """Tutoriel : mettre à jour un MikroTik vers RouterOS 7 (prérequis
+    à la synchronisation automatique des tickets)."""
+    return render_template("tuto_routeros.html", client=current_client())
+
+
+@app.route("/mikrotik/connexion")
+@login_required
+def mikrotik_connect():
+    """Affiche le bloc WireGuard à coller UNE FOIS pour connecter le
+    routeur du client à la plateforme (envoi automatique des tickets)."""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("provisioned") or not sub.get("slug"):
+        flash("Configurez et déployez d'abord votre système.", "info")
+        return redirect(url_for("dashboard"))
+
+    block, error = None, None
+    try:
+        import wg_store
+        if wg_store.get_server() is None:
+            error = "not_ready"      # serveur WireGuard pas encore installé
+        else:
+            block = wg_store.provision_peer(sub["slug"])["block"]
+    except Exception:
+        error = "unavailable"        # moteur SaaS absent (dev local)
+
+    return render_template("connexion.html", client=client, sub=sub,
+                           block=block, error=error)
 
 
 @app.route("/mikrotik")
@@ -209,20 +359,205 @@ def mikrotik_script():
         "router_token": sub.get("router_token", "") or "",
     }
     oneliner   = mks.generate_oneliner(tenant, vps_ip)
-    health_url = f"http://{vps_ip}/t/{sub['slug']}/health"
+    health_url = mks.health_url(vps_ip, sub["slug"])
+    profiles   = _profiles_from_sub(sub)
 
-    profiles = _profiles_from_sub(sub)
-    scripts_by_profile = {
-        name: mks.generate_oneliner(tenant, vps_ip, data.get("validity") or "30d")
-        for name, data in profiles.items()
-    }
+    # Un script On Login complet PAR profil : logique mikhmon (expiration +
+    # prix/validité du profil) fusionnée avec la notification de vente. Le
+    # client colle chaque script dans le On Login du User Profile correspondant.
+    scripts_by_profile = mks.build_profile_scripts(
+        profiles, vps_ip, sub["slug"], tenant["router_token"])
 
     return render_template("mikrotik.html",
                            client=client, sub=sub,
                            oneliner=oneliner,
                            profiles=profiles,
                            scripts_by_profile=scripts_by_profile,
+                           limits=config.plan_limits(sub.get("plan")),
                            vps_ip=vps_ip, health_url=health_url)
+
+
+# ═══════════════════════════════════════════════
+# VPN D'ACCÈS AU ROUTEUR (forfaits 8000 / 15000)
+# ═══════════════════════════════════════════════
+
+# Fraîcheur d'un handshake WireGuard : au-delà, on considère le pair déconnecté.
+# WireGuard renégocie ~toutes les 2 min (keepalive 25 s) ; wg_sync écrit chaque
+# minute -> 240 s couvre la latence sans faux « connecté ».
+_VPN_FRESH_S = 240
+
+
+def _vpn_conn_state(slug: str):
+    """(routeur_en_ligne, {device_id: en_ligne}, un_appareil_connecté) d'après
+    les handshakes persistés par wg_sync. Best-effort."""
+    try:
+        import time as _t
+        import wg_store
+        now = _t.time()
+        router = wg_store.get_peer(slug)
+        r_on = bool(router) and (now - wg_store.last_handshake(router["router_public_key"])) < _VPN_FRESH_S
+        devs = {d["id"]: (now - wg_store.last_handshake(d["public_key"])) < _VPN_FRESH_S
+                for d in wg_store.list_admin_peers(slug)}
+        return r_on, devs, any(devs.values())
+    except Exception as e:
+        print(f"[VPN] état connexion {e}", flush=True)
+        return False, {}, False
+
+
+@app.route("/mikrotik/vpn")
+@login_required
+def mikrotik_vpn():
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("provisioned") or not sub.get("slug"):
+        flash("Configurez d'abord votre système.", "info")
+        return redirect(url_for("dashboard"))
+
+    lim = config.plan_limits(sub.get("plan"))
+    if not lim["vpn"]:
+        flash("Le VPN d'accès à distance est inclus dans les forfaits 8000 et 15000 FCFA.", "info")
+        return redirect(url_for("subscribe") + "?plan=12m")
+
+    status = "unavailable"          # moteur SaaS absent (dev local)
+    router_ip = None
+    router_online = False
+    devices = []
+    try:
+        import wg_store, vpn_access
+        if wg_store.get_server() is None:
+            status = "not_ready"    # serveur WireGuard pas encore installé
+        else:
+            wg_store.provision_admin_peer(sub["slug"])       # au moins un appareil
+            status = vpn_access.push_vpn_access(sub["slug"]).get("status", "error")
+            router_online, dev_state, _ = _vpn_conn_state(sub["slug"])
+            for d in wg_store.list_admin_peers(sub["slug"]):
+                cfg = wg_store.get_admin_config(sub["slug"], d["id"])
+                if not cfg:
+                    continue
+                router_ip = cfg["router_ip"]
+                devices.append({
+                    "id": d["id"],
+                    "label": d["label"] or f"Appareil {d['id']}",
+                    "tunnel_ip": d["tunnel_ip"],
+                    "online": dev_state.get(d["id"], False),
+                    "conf": cfg["config"],
+                })
+    except Exception as e:
+        print(f"[VPN] {e}", flush=True)
+
+    return render_template("vpn.html", client=client, sub=sub,
+                           status=status, router_ip=router_ip,
+                           router_online=router_online, devices=devices,
+                           max_devices=lim["max_vpn_devices"])
+
+
+@app.route("/mikrotik/vpn/add", methods=["POST"])
+@login_required
+def mikrotik_vpn_add():
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        flash("Aucun abonnement actif.", "error")
+        return redirect(url_for("dashboard"))
+    lim = config.plan_limits(sub.get("plan"))
+    if not lim["vpn"]:
+        return redirect(url_for("subscribe"))
+    try:
+        import wg_store, vpn_access
+        if wg_store.count_admin_peers(sub["slug"]) >= lim["max_vpn_devices"]:
+            flash(f"Votre forfait autorise {lim['max_vpn_devices']} appareil(s) VPN maximum.", "error")
+            return redirect(url_for("mikrotik_vpn"))
+        label = (request.form.get("label") or "").strip()[:60]
+        wg_store.add_admin_peer(sub["slug"], label or "Nouvel appareil")
+        vpn_access.push_vpn_access(sub["slug"])
+        flash("Appareil VPN ajouté. Téléchargez sa configuration ci-dessous.", "success")
+    except Exception as e:
+        print(f"[VPN] add {e}", flush=True)
+        flash("Impossible d'ajouter l'appareil pour le moment.", "error")
+    return redirect(url_for("mikrotik_vpn"))
+
+
+@app.route("/mikrotik/vpn/<int:device_id>/delete", methods=["POST"])
+@login_required
+def mikrotik_vpn_delete(device_id):
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        flash("Aucun abonnement actif.", "error")
+        return redirect(url_for("dashboard"))
+    try:
+        import wg_store, vpn_access
+        if wg_store.count_admin_peers(sub["slug"]) <= 1:
+            flash("Vous devez conserver au moins un appareil VPN.", "error")
+            return redirect(url_for("mikrotik_vpn"))
+        wg_store.delete_admin_peer(sub["slug"], device_id)
+        vpn_access.push_vpn_access(sub["slug"])
+        flash("Appareil VPN supprimé. Son accès sera coupé sous une minute.", "success")
+    except Exception as e:
+        print(f"[VPN] delete {e}", flush=True)
+        flash("Suppression impossible pour le moment.", "error")
+    return redirect(url_for("mikrotik_vpn"))
+
+
+@app.route("/mikrotik/vpn/status")
+@login_required
+def mikrotik_vpn_status():
+    """État de connexion en temps réel (sondé par la page VPN)."""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        return jsonify({"router": False, "devices": {}, "operator": False})
+    r_on, devs, any_on = _vpn_conn_state(sub["slug"])
+    return jsonify({"router": r_on, "operator": any_on,
+                    "devices": {str(k): v for k, v in devs.items()}})
+
+
+def _vpn_conf_response(conf: str, name: str):
+    resp = Response(conf, mimetype="text/plain")
+    resp.headers["Content-Disposition"] = f"attachment; filename={name}"
+    return resp
+
+
+@app.route("/mikrotik/vpn.conf")
+@login_required
+def mikrotik_vpn_download():
+    """Config du premier appareil (compatibilité)."""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        flash("Aucun abonnement actif.", "error")
+        return redirect(url_for("dashboard"))
+    if not config.plan_limits(sub.get("plan"))["vpn"]:
+        return redirect(url_for("subscribe"))
+    try:
+        import wg_store
+        conf = wg_store.provision_admin_peer(sub["slug"])["config"]
+    except Exception:
+        flash("Configuration VPN indisponible pour le moment.", "error")
+        return redirect(url_for("mikrotik_vpn"))
+    return _vpn_conf_response(conf, "hotspotpro-vpn.conf")
+
+
+@app.route("/mikrotik/vpn/<int:device_id>.conf")
+@login_required
+def mikrotik_vpn_device_download(device_id):
+    """Config .conf d'un appareil VPN précis (multi-appareils)."""
+    client = current_client()
+    sub    = get_active_sub(client["id"])
+    if not sub or not sub.get("slug"):
+        flash("Aucun abonnement actif.", "error")
+        return redirect(url_for("dashboard"))
+    if not config.plan_limits(sub.get("plan"))["vpn"]:
+        return redirect(url_for("subscribe"))
+    try:
+        import wg_store
+        cfg = wg_store.get_admin_config(sub["slug"], device_id)
+    except Exception:
+        cfg = None
+    if not cfg:
+        flash("Configuration VPN indisponible pour le moment.", "error")
+        return redirect(url_for("mikrotik_vpn"))
+    return _vpn_conf_response(cfg["config"], f"hotspotpro-vpn-{device_id}.conf")
 
 
 @app.route("/mikrotik/script/<int:device_id>")
@@ -261,13 +596,17 @@ def mikrotik_device_script(device_id):
         "slug":         device["slug"],
         "router_token": router_token,
     }
-    script     = mks.generate_full_script(tenant, vps_ip)
     oneliner   = mks.generate_oneliner(tenant, vps_ip)
-    health_url = f"http://{vps_ip}/t/{device['slug']}/health"
+    health_url = mks.health_url(vps_ip, device["slug"])
+    profiles   = _profiles_from_sub(sub)
+    scripts_by_profile = mks.build_profile_scripts(
+        profiles, vps_ip, device["slug"], router_token)
 
     return render_template("mikrotik.html",
                            client=client, sub=sub,
-                           script=script, oneliner=oneliner,
+                           oneliner=oneliner,
+                           scripts_by_profile=scripts_by_profile,
+                           profiles=profiles,
                            vps_ip=vps_ip, health_url=health_url,
                            device=device)
 
@@ -299,7 +638,7 @@ def mikrotik_add():
             plan = "1m"
         p = config.PLANS[plan]
 
-        if not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+        if not is_valid_ip(ip):
             flash("Adresse IP invalide.", "error")
             return render_template("mikrotik_add.html", sub=sub, plans=config.PLANS)
 
@@ -363,11 +702,17 @@ def mikrotik_delete(device_id):
         except Exception:
             pass
 
+    # Annuler les paiements encore en attente pour ce routeur, sinon ils
+    # resteraient affichés « en attente » indéfiniment sur le dashboard
+    conn.execute("""
+        UPDATE mikrotik_payments SET status='canceled'
+        WHERE device_id=? AND status='pending'
+    """, (device_id,))
     conn.execute("DELETE FROM mikrotik_devices WHERE id=?", (device_id,))
     conn.commit()
     conn.close()
 
-    flash("🗑️ Routeur supprimé. Aucun remboursement ne sera effectué.", "warning")
+    flash("Routeur supprimé. Aucun remboursement ne sera effectué.", "warning")
     return redirect(url_for("dashboard"))
 
 
@@ -385,15 +730,19 @@ def account():
         if action == "update_profile":
             name  = request.form.get("full_name", "").strip()
             phone = request.form.get("phone", "").strip()
+            color = request.form.get("avatar_color", "").strip()
+            if color not in AVATAR_COLORS:
+                color = client.get("avatar_color")
             if not name:
                 flash("Le nom ne peut pas être vide.", "error")
             else:
                 conn = get_db()
-                conn.execute("UPDATE clients SET full_name=?, phone=? WHERE id=?",
-                             (name, phone, client["id"]))
+                conn.execute("UPDATE clients SET full_name=?, phone=?, avatar_color=? WHERE id=?",
+                             (name, phone, color, client["id"]))
                 conn.commit()
                 conn.close()
                 session["full_name"] = name
+                session["avatar_color"] = color
                 flash("Profil mis à jour.", "success")
                 return redirect(url_for("account"))
 
@@ -427,4 +776,5 @@ def account():
     conn.close()
 
     return render_template("account.html", client=client,
-                           payments=payments, plans=config.PLANS)
+                           payments=payments, plans=config.PLANS,
+                           avatar_colors=AVATAR_COLORS)

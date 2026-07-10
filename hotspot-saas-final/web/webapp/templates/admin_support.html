@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Support — HotspotPro{% endblock %}
+{% block topbar_title %}Support opérateurs{% endblock %}
+{% block topbar_subtitle %}Bot Telegram et tickets{% endblock %}
+
+{% block extra_head %}
+<style>
+.sup-intro{font-size:.84rem;color:var(--muted);line-height:1.6;margin-bottom:1.1rem}
+.sup-state{display:flex;align-items:center;gap:.6rem;font-size:.86rem;margin-bottom:.9rem}
+.dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.dot.on{background:var(--green);box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+.dot.off{background:var(--muted)}
+.msg-cell{max-width:360px;white-space:pre-wrap;word-break:break-word;font-size:.82rem;line-height:1.5}
+.scroll-cap{max-height:460px;overflow-y:auto}
+.scroll-cap thead th{position:sticky;top:0;z-index:1;background:var(--surface,#fff);box-shadow:inset 0 -1px 0 var(--border)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1.2rem">
+  <div class="card-title">État du bot de support</div>
+  {% if configured %}
+  <div class="sup-state"><span class="dot on"></span> Bot configuré (token + chat ID renseignés).</div>
+  <p class="sup-intro">
+    Activez le webhook pour que le bot reçoive les messages des opérateurs. Chaque
+    nouveau ticket vous arrive par <strong>e-mail</strong> et dans votre <strong>chat Telegram</strong>.
+    Pour répondre à un opérateur, <strong>répondez au message du ticket</strong> dans Telegram :
+    votre réponse lui est relayée automatiquement.
+  </p>
+  <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+    <form method="POST" action="{{ url_for('admin_support_activate') }}" style="margin:0">
+      {{ csrf_field() }}
+      <button type="submit" class="btn btn-success btn-sm">Activer / réactiver le bot</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin_support_deactivate') }}" style="margin:0">
+      {{ csrf_field() }}
+      <button type="submit" class="btn btn-outline btn-sm">Désactiver</button>
+    </form>
+  </div>
+  {% else %}
+  <div class="sup-state"><span class="dot off"></span> Bot non configuré.</div>
+  <p class="sup-intro">
+    Renseignez le <strong>token du bot de support</strong> et le <strong>chat ID</strong> dans la
+    <a href="{{ url_for('admin_settings') }}" style="color:var(--accent);font-weight:600;text-decoration:none">configuration</a>,
+    puis revenez ici pour activer le webhook.
+  </p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-title">
+    Tickets
+    <span style="font-size:.72rem;color:{% if open_count %}var(--accent){% else %}var(--muted){% endif %};font-weight:600;margin-left:.4rem">
+      {{ open_count }} ouvert{{ 's' if open_count != 1 }} · {{ tickets|length }} au total
+    </span>
+  </div>
+  {% if tickets %}
+  <div class="table-wrap scroll-cap">
+    <table>
+      <thead><tr><th>#</th><th>Opérateur</th><th>Message</th><th>Statut</th><th>Reçu le</th></tr></thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td class="mono">{{ t.id }}</td>
+          <td style="font-size:.82rem">
+            {% if t.client_id %}
+              <a href="{{ url_for('admin_client', cid=t.client_id) }}" style="color:var(--accent);font-weight:700;text-decoration:none">{{ t.client_name }}</a><br>
+              <span class="muted-sm">{{ t.client_email }}</span><br>
+            {% endif %}
+            {% if t.tg_username %}<span class="mono muted-sm">@{{ t.tg_username }}</span> · {% endif %}
+            <span class="mono muted-sm">chat {{ t.chat_id }}</span>
+          </td>
+          <td class="msg-cell">{{ t.message }}</td>
+          <td>
+            {% if t.status=='answered' %}<span class="badge badge-green">Répondu</span>
+            {% else %}<span class="badge badge-yellow">Ouvert</span>{% endif %}
+          </td>
+          <td class="mono muted-sm" style="white-space:nowrap">{{ t.created_at[:16] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:1.6rem;color:var(--muted);font-size:.85rem">
+    Aucun ticket pour l'instant. Les demandes des opérateurs apparaîtront ici.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -13,15 +13,16 @@ class FedaPayError(Exception):
 
 
 def _base_url() -> str:
-    return ("https://api.fedapay.com" if config.FEDAPAY_ENV == "live"
+    return ("https://api.fedapay.com" if config.fedapay_env() == "live"
             else "https://sandbox-api.fedapay.com")
 
 
 def _headers() -> dict:
-    if not config.FEDAPAY_SECRET_KEY:
-        raise FedaPayError("FEDAPAY_SECRET_KEY non configurée.")
+    secret = config.fedapay_secret_key()
+    if not secret:
+        raise FedaPayError("Clé secrète FedaPay non configurée.")
     return {
-        "Authorization": f"Bearer {config.FEDAPAY_SECRET_KEY}",
+        "Authorization": f"Bearer {secret}",
         "Content-Type":  "application/json",
     }
 
@@ -77,6 +78,26 @@ def get_transaction(trans_id: str) -> dict:
             or next(iter(data.values())))
 
 
+def transaction_status(trans_id: str) -> dict:
+    """État réel d'une transaction FedaPay (source de vérité), pour valider
+    une confirmation manuelle avant d'activer quoi que ce soit.
+
+    Retourne {'status': str, 'amount': int|None, 'currency': str}. `status`
+    vaut 'approved' quand le paiement a réellement abouti ; toute autre valeur
+    ('pending', 'canceled', 'declined', ...) signifie que rien n'a été payé.
+    Lève une exception si FedaPay est injoignable (l'appelant doit alors
+    refuser, jamais activer par défaut)."""
+    t   = get_transaction(trans_id)
+    cur = t.get("currency") or {}
+    amount = t.get("amount")
+    return {
+        "status":   (t.get("status") or "").lower(),
+        "amount":   int(amount) if amount is not None else None,
+        "currency": (cur.get("iso") or "").upper() if isinstance(cur, dict)
+                    else str(cur).upper(),
+    }
+
+
 # ═══════════════════════════════════════════════
 # WEBHOOK
 # ═══════════════════════════════════════════════
@@ -89,41 +110,39 @@ def verify_webhook_signature(payload: bytes, header: str) -> bool:
     invalide doit entraîner un rejet 403 de la requête.
 
     Format officiel (comme Stripe) : "t=<timestamp>,s=<hmac>" où le HMAC
-    SHA-256 est calculé sur "<timestamp>.<payload>". Par tolérance, on
-    accepte aussi un HMAC brut du payload seul (anciennes versions).
+    SHA-256 est calculé sur "<timestamp>.<payload>". Le timestamp est
+    obligatoire : un HMAC du payload seul serait rejouable indéfiniment.
     """
-    key = config.FEDAPAY_WEBHOOK_KEY
+    key = config.fedapay_webhook_key()
     if not key or not header:
         return False
 
-    # Schéma t=...,s=...
     parts = dict(
         item.split("=", 1) for item in header.split(",") if "=" in item
     )
-    if "t" in parts and "s" in parts:
-        try:
-            ts = int(parts["t"])
-        except ValueError:
-            return False
-        if abs(time.time() - ts) > SIGNATURE_TOLERANCE_S:
-            return False
-        signed = f"{parts['t']}.".encode() + payload
-        expected = hmac.new(key.encode(), signed, hashlib.sha256).hexdigest()
-        return hmac.compare_digest(expected, parts["s"])
-
-    # Fallback : HMAC brut du payload
-    expected = hmac.new(key.encode(), payload, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, header)
+    if "t" not in parts or "s" not in parts:
+        return False
+    try:
+        ts = int(parts["t"])
+    except ValueError:
+        return False
+    if abs(time.time() - ts) > SIGNATURE_TOLERANCE_S:
+        return False
+    signed = f"{parts['t']}.".encode() + payload
+    expected = hmac.new(key.encode(), signed, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, parts["s"])
 
 
 def parse_webhook(payload: bytes) -> dict:
     """Décode l'événement webhook : {name, transaction, trans_id, metadata}."""
     data        = json.loads(payload)
     transaction = data.get("data", {}).get("object", {}) or data.get("entity", {})
+    currency    = transaction.get("currency") or {}
     return {
         "name":        data.get("name", ""),
         "transaction": transaction,
         "trans_id":    str(transaction.get("id", "")),
         "metadata":    transaction.get("metadata") or {},
         "amount":      transaction.get("amount"),
+        "currency":    (currency.get("iso") or "").upper() if isinstance(currency, dict) else str(currency).upper(),
     }

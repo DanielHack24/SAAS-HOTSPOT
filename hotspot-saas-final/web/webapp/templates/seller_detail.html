@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ seller.name }} — HotspotPro{% endblock %}
+{% block topbar_title %}{{ seller.name }}{% endblock %}
+{% block topbar_subtitle %}Statistiques, génération de tickets et lots{% endblock %}
+
+{% block extra_head %}
+<style>
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:.2rem}
+@media(max-width:560px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+.stat-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:.9rem .9rem;text-align:center;
+  transition:transform .25s cubic-bezier(.22,1,.36,1),border-color .25s}
+.stat-box:hover{transform:translateY(-3px);border-color:rgba(194,65,12,.3)}
+.stat-box .n{font-family:var(--fh);font-weight:700;font-size:1.4rem;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1}
+.stat-box.accent .n{color:var(--accent)}
+.stat-box .l{font-size:.7rem;color:var(--muted);margin-top:.3rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.gen-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+@media(max-width:560px){.gen-grid{grid-template-columns:1fr}}
+.batch-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem .6rem;
+  border-bottom:1px solid var(--border);font-size:.85rem;border-radius:8px;
+  transition:background .2s,padding-left .2s}
+.batch-row:last-child{border-bottom:none}
+.batch-row:hover{background:var(--bg);padding-left:.9rem}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <a href="{{ url_for('sellers') }}" style="color:var(--muted);font-size:.83rem;text-decoration:none">&lsaquo; Tous les vendeurs</a>
+
+  <!-- Inventaire -->
+  <div class="card rise d1">
+    <div class="card-title">Inventaire & recettes</div>
+    <div class="stat-row">
+      <div class="stat-box pop d1"><div class="n count" data-to="{{ seller.generated }}">0</div><div class="l">Générés</div></div>
+      <div class="stat-box pop d2"><div class="n count" data-to="{{ seller.sold }}">0</div><div class="l">Vendus</div></div>
+      <div class="stat-box pop d3"><div class="n count" data-to="{{ seller.stock }}">0</div><div class="l">En stock</div></div>
+      <div class="stat-box accent pop d4"><div class="n count" data-to="{{ seller.revenue }}">0</div><div class="l">FCFA encaissés</div></div>
+    </div>
+  </div>
+
+  {% if seller.name != unassigned %}
+  <!-- Génération -->
+  <div class="card rise d2">
+    <div class="card-title">Générer des tickets</div>
+    {% if profiles %}
+    <form method="POST" action="{{ url_for('seller_generate', sid=seller.id) }}">
+      {{ csrf_field() }}
+      <div class="gen-grid">
+        <div class="form-group">
+          <label class="form-label">Profil</label>
+          <select class="form-input" name="profile" required>
+            {% for name, p in profiles.items() %}
+            <option value="{{ name }}">{{ name }}{% if p.price %} — {{ "{:,}".format(p.price).replace(",", " ") }} FCFA{% endif %}{% if p.validity %} · {{ p.validity }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantité{% if limits %} <span style="font-weight:400;color:var(--muted);font-size:.78rem">(max {{ limits.max_tickets }})</span>{% endif %}</label>
+          <input class="form-input" type="number" name="qty" min="1" max="{{ limits.max_tickets if limits else 1000 }}" value="20" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longueur du code</label>
+          <select class="form-input" name="code_len">
+            {% for n in [4,5,6,7] %}<option value="{{ n }}" {% if n==5 %}selected{% endif %}>{{ n }} caractères</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jeu de caractères</label>
+          <select class="form-input" name="charset">
+            {% for key, label in charsets.items() %}<option value="{{ key }}" {% if key=='alnum' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1 / -1">
+          <label class="form-label">Mot de passe</label>
+          <select class="form-input" name="pw_mode">
+            {% for key, label in pw_modes.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary sheen">Générer les tickets</button>
+    </form>
+    {% else %}
+    <div style="color:var(--muted);font-size:.86rem">
+      Aucun profil configuré. <a href="{{ url_for('configure') }}?reconfigure=1" style="color:var(--accent);font-weight:600">Configurez vos profils</a> d'abord.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Lots -->
+  <div class="card rise d3">
+    <div class="card-title">Lots générés</div>
+    {% if batches %}
+    {% for b in batches %}
+    <div class="batch-row">
+      <div>
+        <strong>Lot #{{ b.id }}</strong> — {{ b.total }} tickets · profil {{ b.profile }}
+        <div style="font-size:.73rem;color:var(--muted)">{{ b.created_at }} · {{ b.sold }} vendus</div>
+      </div>
+      <a href="{{ url_for('batch_view', sid=seller.id, bid=b.id) }}" class="btn btn-outline btn-sm">Ouvrir</a>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="color:var(--muted);font-size:.85rem">Aucun lot pour l'instant.</div>
+    {% endif %}
+  </div>
+
+  <!-- Gestion -->
+  <div class="card rise d4">
+    <div class="card-title">Gérer ce vendeur</div>
+    <form method="POST" action="{{ url_for('seller_rename', sid=seller.id) }}" style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.8rem">
+      {{ csrf_field() }}
+      <input class="form-input" type="text" name="name" value="{{ seller.name }}" required style="flex:1;min-width:200px">
+      <button type="submit" class="btn btn-outline">Renommer</button>
+    </form>
+    <form method="POST" action="{{ url_for('seller_delete', sid=seller.id) }}"
+          onsubmit="return confirm('Supprimer ce vendeur ? Ses tickets en stock (invendus) seront retirés. Les ventes déjà enregistrées restent dans vos statistiques.')">
+      {{ csrf_field() }}
+      <button type="submit" class="btn btn-outline" style="color:#B91C1C;border-color:#FCA5A5">Supprimer le vendeur</button>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

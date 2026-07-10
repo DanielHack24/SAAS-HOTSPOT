@@ -65,7 +65,7 @@ def admin_required(f):
 # Jeton stocké en session, exigé sur toutes les requêtes POST sauf
 # les endpoints exemptés (webhooks signés, appels machine-à-machine).
 
-CSRF_EXEMPT_ENDPOINTS = {"webhook_fedapay"}
+CSRF_EXEMPT_ENDPOINTS = {"webhook_fedapay", "telegram_webhook"}
 
 
 def csrf_token() -> str:

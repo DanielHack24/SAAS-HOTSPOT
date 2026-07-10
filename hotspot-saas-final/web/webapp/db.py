@@ -89,6 +89,14 @@ def init_web_db():
     """)
 
     c.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key        TEXT PRIMARY KEY,
+            value      TEXT,
+            updated_at TEXT DEFAULT (datetime('now','localtime'))
+        )
+    """)
+
+    c.execute("""
         CREATE TABLE IF NOT EXISTS mikrotik_payments (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             client_id    INTEGER NOT NULL REFERENCES clients(id),
@@ -103,12 +111,79 @@ def init_web_db():
         )
     """)
 
+    # Inscriptions en attente de vérification e-mail : le compte n'est créé
+    # dans `clients` qu'après saisie du code reçu par e-mail (une ligne par
+    # e-mail, remplacée à chaque nouvelle demande).
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS pending_registrations (
+            email         TEXT PRIMARY KEY,
+            full_name     TEXT NOT NULL,
+            phone         TEXT,
+            password_hash TEXT NOT NULL,
+            plan          TEXT,
+            code_hash     TEXT NOT NULL,
+            expires_at    TEXT NOT NULL,
+            attempts      INTEGER DEFAULT 0,
+            created_at    TEXT DEFAULT (datetime('now','localtime'))
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS support_tickets (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_id      TEXT NOT NULL,
+            tg_username  TEXT,
+            tg_name      TEXT,
+            category     TEXT,
+            message      TEXT NOT NULL,
+            status       TEXT DEFAULT 'open',
+            admin_msg_id TEXT,
+            created_at   TEXT DEFAULT (datetime('now','localtime')),
+            answered_at  TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS support_sessions (
+            chat_id    TEXT PRIMARY KEY,
+            state      TEXT,
+            updated_at TEXT DEFAULT (datetime('now','localtime'))
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS support_accounts (
+            chat_id   TEXT PRIMARY KEY,
+            client_id INTEGER NOT NULL,
+            linked_at TEXT DEFAULT (datetime('now','localtime'))
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS support_link_tokens (
+            token      TEXT PRIMARY KEY,
+            client_id  INTEGER NOT NULL,
+            expires_at TEXT NOT NULL
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS support_notify_state (
+            client_id  INTEGER NOT NULL,
+            kind       TEXT NOT NULL,
+            state      TEXT,
+            updated_at TEXT DEFAULT (datetime('now','localtime')),
+            PRIMARY KEY (client_id, kind)
+        )
+    """)
+
     # Migrations silencieuses pour bases existantes
     for ddl in (
         "ALTER TABLE mikrotik_payments ADD COLUMN plan TEXT NOT NULL DEFAULT '1m'",
         "ALTER TABLE subscriptions ADD COLUMN prices TEXT DEFAULT NULL",
         "ALTER TABLE subscriptions ADD COLUMN router_name TEXT DEFAULT 'Routeur principal'",
         "ALTER TABLE subscriptions ADD COLUMN router_token TEXT DEFAULT NULL",
+        "ALTER TABLE mikrotik_devices ADD COLUMN end_date TEXT DEFAULT NULL",
+        "ALTER TABLE mikrotik_devices ADD COLUMN active INTEGER DEFAULT 1",
+        "ALTER TABLE clients ADD COLUMN reset_token_hash TEXT DEFAULT NULL",
+        "ALTER TABLE clients ADD COLUMN reset_token_expires TEXT DEFAULT NULL",
+        "ALTER TABLE clients ADD COLUMN avatar_color TEXT DEFAULT NULL",
+        "ALTER TABLE support_tickets ADD COLUMN client_id INTEGER DEFAULT NULL",
     ):
         try:
             c.execute(ddl)
@@ -203,9 +278,21 @@ def get_client_devices(client_id: int, subscription_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def days_remaining(end_date_str: str) -> int:
+def _parse_end_date(end_date_str: str) -> datetime:
     try:
-        end = datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
+        return datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        end = datetime.strptime(end_date_str, "%Y-%m-%d")
-    return max(0, (end - datetime.now()).days)
+        return datetime.strptime(end_date_str, "%Y-%m-%d")
+
+
+def days_remaining(end_date_str: str) -> int:
+    return max(0, (_parse_end_date(end_date_str) - datetime.now()).days)
+
+
+def is_expired(end_date_str: str) -> bool:
+    """Vrai uniquement quand la date de fin est réellement dépassée —
+    un abonnement qui expire ce soir reste actif toute la journée
+    (days_remaining tronque et dirait 0 dès minuit)."""
+    if not end_date_str:
+        return False
+    return _parse_end_date(end_date_str) < datetime.now()

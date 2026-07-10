@@ -2,6 +2,7 @@
 routes_api.py — API JSON du dashboard + cron d'expiration
 """
 import json
+import secrets
 from datetime import datetime
 
 from flask import request, session, jsonify
@@ -10,8 +11,18 @@ import config
 import services
 from webapp_core import app, PROVISIONER_OK
 import webapp_core as core
-from db import get_db, get_active_sub, days_remaining
+from db import get_db, get_active_sub, days_remaining, is_expired
 from security import login_required
+
+
+def _cron_key_ok() -> bool:
+    """Clé cron acceptée UNIQUEMENT en en-tête X-Cron-Key (jamais en query
+    string : elle finirait dans les logs nginx). Comparaison a temps constant.
+    Sans CRON_KEY configuree, tout est refuse."""
+    if not config.CRON_KEY:
+        return False
+    sent = request.headers.get("X-Cron-Key", "")
+    return bool(sent) and secrets.compare_digest(sent, config.CRON_KEY)
 
 
 @app.route("/api/stats/today")
@@ -80,14 +91,51 @@ def api_profiles():
 
 
 # ═══════════════════════════════════════════════
+# CRON — Rattrapage de synchronisation des tickets
+# ═══════════════════════════════════════════════
+
+@app.route("/cron/sync_tickets")
+def cron_sync_tickets():
+    """Repousse vers les routeurs les tickets restés en attente (routeur
+    éteint au moment de la génération). À appeler périodiquement."""
+    if not _cron_key_ok():
+        return jsonify({"error": "unauthorized"}), 403
+
+    try:
+        import hotspot_sync
+    except Exception:
+        return jsonify({"error": "moteur indisponible"}), 200
+
+    conn = get_db()
+    subs = conn.execute("""
+        SELECT DISTINCT slug FROM subscriptions
+        WHERE active=1 AND provisioned=1 AND slug IS NOT NULL AND slug<>''
+    """).fetchall()
+    conn.close()
+
+    results = []
+    for row in subs:
+        slug = row["slug"]
+        try:
+            res = hotspot_sync.push_pending(slug)
+            if res.get("pushed") or res.get("pending"):
+                results.append({"slug": slug, **res})
+        except Exception as e:
+            results.append({"slug": slug, "status": "error", "error": str(e)})
+
+    return jsonify({"synced": results,
+                    "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+
+
+# ═══════════════════════════════════════════════
 # CRON — Vérification des expirations
 # ═══════════════════════════════════════════════
 
 @app.route("/cron/check_expiry")
 def cron_check_expiry():
-    key = request.args.get("key", "")
-    # CRON_KEY obligatoire : pas de valeur par défaut acceptée
-    if not config.CRON_KEY or key != config.CRON_KEY:
+    # Clé exigée en en-tête X-Cron-Key uniquement (une query string ?key=
+    # finirait dans les logs nginx). CRON_KEY obligatoire : pas de défaut.
+    if not _cron_key_ok():
         return jsonify({"error": "unauthorized"}), 403
 
     conn = get_db()
@@ -102,9 +150,8 @@ def cron_check_expiry():
 
     for row in subs:
         sub = dict(row)
-        d   = days_remaining(sub["end_date"])
 
-        if d <= 0:
+        if is_expired(sub["end_date"]):
             conn.execute("UPDATE subscriptions SET active=0 WHERE id=?", (sub["id"],))
             if sub["slug"] and PROVISIONER_OK:
                 try:
@@ -120,7 +167,7 @@ def cron_check_expiry():
                 ))
             expired.append({"id": sub["id"], "name": sub["full_name"]})
 
-        elif d <= 3:
+        elif (d := days_remaining(sub["end_date"])) <= 3:
             if sub["bot_token"] and sub["chat_id"]:
                 services.send_telegram_notify(sub["bot_token"], sub["chat_id"], (
                     f"⏰ <b>Votre abonnement expire dans {d} jour(s).</b>\n\n"
@@ -129,11 +176,40 @@ def cron_check_expiry():
                 ))
             expiring.append({"id": sub["id"], "name": sub["full_name"], "days": d})
 
+    # Routeurs supplémentaires : payés pour une durée fixe, ils doivent
+    # être suspendus à leur propre échéance (indépendamment de
+    # l'abonnement principal).
+    devices = conn.execute("""
+        SELECT md.*, s.bot_token, s.chat_id
+        FROM mikrotik_devices md
+        LEFT JOIN subscriptions s ON md.subscription_id = s.id
+        WHERE md.provisioned=1 AND md.active=1 AND md.end_date IS NOT NULL
+    """).fetchall()
+
+    expired_devices = []
+    for row in devices:
+        device = dict(row)
+        if not is_expired(device["end_date"]):
+            continue
+        conn.execute("UPDATE mikrotik_devices SET active=0 WHERE id=?", (device["id"],))
+        if device["slug"] and PROVISIONER_OK:
+            try:
+                core.stop_tenant(device["slug"])
+            except Exception:
+                pass
+        if device.get("bot_token") and device.get("chat_id"):
+            services.send_telegram_notify(device["bot_token"], device["chat_id"], (
+                f"⚠️ <b>Le forfait du routeur « {device['label']} » a expiré.</b>\n\n"
+                "Ce routeur a été suspendu. Renouvelez-le depuis votre espace client."
+            ))
+        expired_devices.append({"id": device["id"], "label": device["label"]})
+
     conn.commit()
     conn.close()
 
     return jsonify({
-        "expired":    expired,
-        "expiring":   expiring,
-        "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "expired":         expired,
+        "expiring":        expiring,
+        "expired_devices": expired_devices,
+        "checked_at":      datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })

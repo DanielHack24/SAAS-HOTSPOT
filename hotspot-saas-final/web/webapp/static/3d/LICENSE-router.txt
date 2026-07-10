@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mikrotik Lhg-5hpnd-xl
+* source:	https://sketchfab.com/3d-models/mikrotik-lhg-5hpnd-xl-d0ca71eb3878445fa89c9bb9eae191ee
+* author:	Paj (https://sketchfab.com/papajri)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mikrotik Lhg-5hpnd-xl" (https://sketchfab.com/3d-models/mikrotik-lhg-5hpnd-xl-d0ca71eb3878445fa89c9bb9eae191ee) by Paj (https://sketchfab.com/papajri) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Configuration — HotspotPro{% endblock %}
+{% block topbar_title %}Configuration de la plateforme{% endblock %}
+{% block topbar_subtitle %}Paiement, email, réseau, alertes et sauvegardes{% endblock %}
+
+{% block extra_head %}
+<style>
+.set-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem 1.1rem}
+.set-grid .full{grid-column:1 / -1}
+@media(max-width:640px){.set-grid{grid-template-columns:1fr}}
+.badge-cfg{font-size:.66rem;font-weight:600;padding:.12rem .5rem;border-radius:999px;
+  vertical-align:middle;margin-left:.4rem;letter-spacing:.02em}
+.badge-cfg.on{background:#DCFCE7;color:#166534}
+.badge-cfg.off{background:#FEF3C7;color:#92400E}
+.switch{display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;user-select:none}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch .track{width:42px;height:24px;border-radius:999px;background:var(--border);
+  position:relative;transition:background .2s;flex-shrink:0}
+.switch .track::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.switch input:checked + .track{background:var(--accent)}
+.switch input:checked + .track::after{transform:translateX(18px)}
+.set-help{font-size:.73rem;color:var(--muted);margin-top:.3rem;line-height:1.5}
+.test-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.2rem}
+.secret-note{font-size:.72rem;color:var(--muted)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <div class="alert alert-info">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div style="font-size:.83rem;line-height:1.55">
+      Ces réglages remplacent les valeurs du fichier <code>.env</code> et prennent effet
+      immédiatement, sans redémarrage. Les champs secrets sont <strong>chiffrés en base</strong>
+      et ne sont jamais réaffichés : laissez-les vides pour conserver la valeur actuelle.
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('admin_settings') }}" autocomplete="off">
+    {{ csrf_field() }}
+    <!-- Bouton par défaut (touche Entrée) : enregistre, ne déclenche pas un test -->
+    <button type="submit" name="action" value="save" aria-hidden="true"
+            style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0"></button>
+
+    {% for group in groups %}
+    <div class="card" style="margin-bottom:1.1rem">
+      <div class="card-title">{{ group.label }}</div>
+      <div class="set-grid">
+        {% for f in group.fields %}
+        <div class="form-group {% if f.type in ('bool',) or f.help %}full{% endif %}" style="margin-bottom:.2rem">
+
+          {% if f.type == 'bool' %}
+          <label class="switch">
+            <input type="checkbox" name="{{ f.key }}" {% if f.value in ('1','true','yes','on','oui', True) %}checked{% endif %}>
+            <span class="track"></span>
+            <span class="form-label" style="margin:0">{{ f.label }}</span>
+          </label>
+
+          {% elif f.type == 'select' %}
+          <label class="form-label">{{ f.label }}</label>
+          <select class="form-input" name="{{ f.key }}">
+            {% for val, lbl in f.options %}
+            <option value="{{ val }}" {% if f.value == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+
+          {% else %}
+          <label class="form-label">
+            {{ f.label }}
+            {% if f.secret %}
+              {% if f.configured %}<span class="badge-cfg on">configuré</span>
+              {% else %}<span class="badge-cfg off">non configuré</span>{% endif %}
+            {% endif %}
+          </label>
+          <input class="form-input"
+                 type="{{ 'password' if f.type == 'password' else ('number' if f.type == 'number' else 'text') }}"
+                 name="{{ f.key }}"
+                 value="{{ '' if f.secret else f.value }}"
+                 {% if f.secret %}placeholder="Laisser vide pour ne pas changer"{% endif %}
+                 autocomplete="off">
+          {% endif %}
+
+          {% if f.help %}<div class="set-help">{{ f.help }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if group.key == 'ops' %}
+      <div class="test-row" style="margin-top:.9rem">
+        <span class="secret-note">Testez avec les valeurs déjà enregistrées :</span>
+        <button type="submit" name="action" value="test_telegram" class="btn btn-outline btn-sm">Tester l'alerte Telegram</button>
+      </div>
+      {% elif group.key == 'brevo' %}
+      <div class="test-row" style="margin-top:.9rem">
+        <span class="secret-note">Testez avec la clé déjà enregistrée :</span>
+        <button type="submit" name="action" value="test_brevo" class="btn btn-outline btn-sm">Vérifier la clé Brevo</button>
+      </div>
+      {% elif group.key == 'backup' %}
+      <div class="test-row" style="margin-top:.9rem">
+        <span class="secret-note">Enregistrez d'abord, puis vérifiez l'accès au serveur distant :</span>
+        <button type="submit" name="action" value="test_backup" class="btn btn-outline btn-sm">Tester la connexion</button>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer la configuration</button>
+      <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">Retour au tableau de bord</a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

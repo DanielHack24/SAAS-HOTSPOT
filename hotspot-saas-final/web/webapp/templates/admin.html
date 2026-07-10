@@ -1,11 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Administration — HotspotPro{% endblock %}
 {% block topbar_title %}Tableau de bord administrateur{% endblock %}
-{% block topbar_actions %}
-  <span class="badge" style="background:rgba(245,166,35,.15);color:#92400e">👑 Admin</span>
+
+{% block extra_head %}
+<style>
+/* Historique borné : au-delà d'une certaine hauteur on fait défiler à la
+   molette, la page ne s'allonge plus indéfiniment. En-tête figé. */
+.scroll-cap{max-height:340px;overflow-y:auto}
+.scroll-cap thead th{position:sticky;top:0;z-index:1;background:var(--surface,#fff);box-shadow:inset 0 -1px 0 var(--border)}
+.card-title.with-action{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap}
+.btn-clear{font-size:.72rem;padding:.28rem .6rem;border-radius:7px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:.35rem;transition:.15s}
+.btn-clear:hover{border-color:var(--accent);color:var(--accent);background:rgba(220,38,38,.06)}
+
+/* Donut répartition des formules */
+.donut-wrap{display:flex;gap:1.6rem;align-items:center;flex-wrap:wrap}
+.donut{position:relative;width:180px;height:180px;flex:0 0 auto}
+.donut svg{transform:rotate(-90deg);overflow:visible}
+.donut svg circle.seg{fill:none;stroke-width:26;stroke-linecap:round;
+  transition:stroke-dasharray 1.1s cubic-bezier(.22,1,.36,1),stroke-width .15s,opacity .15s;
+  cursor:pointer}
+.donut svg circle.seg:hover{stroke-width:30}
+.donut.dim svg circle.seg{opacity:.35}
+.donut.dim svg circle.seg.active{opacity:1}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.donut-center .dc-val{font-size:1.9rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.donut-center .dc-lbl{font-size:.7rem;color:var(--muted);margin-top:.25rem;max-width:120px}
+.donut-legend{display:flex;flex-direction:column;gap:.5rem;min-width:180px;flex:1}
+.leg-row{display:flex;align-items:center;gap:.6rem;font-size:.82rem;padding:.28rem .4rem;border-radius:8px;cursor:pointer;transition:.12s}
+.leg-row:hover{background:rgba(0,0,0,.04)}
+.leg-dot{width:12px;height:12px;border-radius:4px;flex:0 0 auto}
+.leg-name{font-weight:600;color:var(--ink)}
+.leg-price{color:var(--muted);font-size:.74rem}
+.leg-count{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.leg-pct{color:var(--muted);font-size:.74rem;font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+</style>
 {% endblock %}
 
 {% block content %}
+
+{% if stats.share_alerts %}
+<div class="alert alert-warning" style="margin-bottom:1.2rem">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <div>
+    <strong>{{ stats.share_alerts }} abonnement{{ 's' if stats.share_alerts != 1 }}</strong> vu{{ 's' if stats.share_alerts != 1 }} depuis plusieurs IP publiques (partage possible sur un 2ᵉ routeur).
+    <a href="{{ url_for('admin_access') }}" style="color:var(--accent);font-weight:600;text-decoration:none">Voir la sécurité</a>
+  </div>
+</div>
+{% endif %}
 
 <!-- Stats -->
 <div class="stats-row">
@@ -21,42 +63,125 @@
   </div>
   <div class="stat-card">
     <div class="stat-card-label">En attente</div>
-    <div class="stat-card-val" style="color:var(--gold)">{{ stats.pending }}</div>
+    <div class="stat-card-val" style="color:var(--amber)">{{ stats.pending }}</div>
     <div class="stat-card-sub">À confirmer</div>
   </div>
   <div class="stat-card">
     <div class="stat-card-label">Revenus confirmés</div>
-    <div class="stat-card-val" style="font-size:1.5rem">{{ "{:,}".format(stats.revenue).replace(",","&thinsp;")|safe }}</div>
+    <div class="stat-card-val" style="font-size:1.35rem">{{ "{:,}".format(stats.revenue).replace(",","&thinsp;")|safe }}</div>
     <div class="stat-card-sub">FCFA</div>
   </div>
   <div class="stat-card">
     <div class="stat-card-label">MikroTik en attente</div>
-    <div class="stat-card-val" style="color:#229ED9">{{ stats.mk_pending if stats.mk_pending is defined else 0 }}</div>
+    <div class="stat-card-val" style="color:var(--blue)">{{ stats.mk_pending if stats.mk_pending is defined else 0 }}</div>
     <div class="stat-card-sub">Routeurs à activer</div>
   </div>
+</div>
+
+<!-- Répartition des formules (donut animé) -->
+<div class="card" style="margin-bottom:1.2rem">
+  <div class="card-title">Répartition des ventes par formule</div>
+  {% if plan_total %}
+  <div class="donut-wrap">
+    <div class="donut" id="donut">
+      <svg viewBox="0 0 120 120" width="180" height="180" aria-hidden="true">
+        <circle cx="60" cy="60" r="47" fill="none" stroke="var(--border)" stroke-width="26" opacity=".35"/>
+        {% for p in plan_stats %}{% if p.count %}
+        <circle class="seg" data-key="{{ p.key }}" data-count="{{ p.count }}"
+                data-label="{{ p.label }}" data-price="{{ p.price }}"
+                cx="60" cy="60" r="47" pathLength="100"
+                stroke="{{ p.color }}" stroke-dasharray="0 100" stroke-dashoffset="0"></circle>
+        {% endif %}{% endfor %}
+      </svg>
+      <div class="donut-center">
+        <span class="dc-val" id="dcVal">{{ plan_total }}</span>
+        <span class="dc-lbl" id="dcLbl">ventes confirmées</span>
+      </div>
+    </div>
+    <div class="donut-legend">
+      {% for p in plan_stats %}
+      <div class="leg-row" data-key="{{ p.key }}">
+        <span class="leg-dot" style="background:{{ p.color }}"></span>
+        <span class="leg-name">{{ p.label }}</span>
+        <span class="leg-price">{{ "{:,}".format(p.price).replace(",","&thinsp;")|safe }} F</span>
+        <span class="leg-count">{{ p.count }}</span>
+        <span class="leg-pct">{{ "%.0f"|format(100 * p.count / plan_total) if plan_total else 0 }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <script>
+  (function(){
+    var total = {{ plan_total }};
+    var donut = document.getElementById('donut');
+    if(!donut) return;
+    var segs = Array.prototype.slice.call(donut.querySelectorAll('circle.seg'));
+    var dcVal = document.getElementById('dcVal'), dcLbl = document.getElementById('dcLbl');
+    // Animation : chaque arc croît depuis 0, décalé pour l'effet cumulatif.
+    var offset = 0, plan = [];
+    segs.forEach(function(s){
+      var pct = 100 * (+s.dataset.count) / total;
+      plan.push({el:s, pct:pct, start:offset});
+      offset += pct;
+    });
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      plan.forEach(function(p){
+        // rotation cumulative via dashoffset négatif (l'arc démarre en haut)
+        p.el.setAttribute('stroke-dashoffset', String(-p.start));
+        p.el.setAttribute('stroke-dasharray', (p.pct - 1.2 > 0 ? (p.pct - 1.2) : p.pct) + ' 100');
+      });
+    });});
+    function focus(key){
+      var s = segs.filter(function(x){return x.dataset.key===key;})[0];
+      if(!s) return;
+      donut.classList.add('dim');
+      segs.forEach(function(x){x.classList.toggle('active', x===s);});
+      dcVal.textContent = s.dataset.count;
+      dcLbl.textContent = s.dataset.label + ' · ' + Math.round(100*(+s.dataset.count)/total) + '%';
+    }
+    function reset(){
+      donut.classList.remove('dim');
+      segs.forEach(function(x){x.classList.remove('active');});
+      dcVal.textContent = total; dcLbl.textContent = 'ventes confirmées';
+    }
+    segs.forEach(function(s){
+      s.addEventListener('mouseenter', function(){focus(s.dataset.key);});
+      s.addEventListener('mouseleave', reset);
+    });
+    donut.parentNode.querySelectorAll('.leg-row').forEach(function(r){
+      r.addEventListener('mouseenter', function(){focus(r.dataset.key);});
+      r.addEventListener('mouseleave', reset);
+    });
+  })();
+  </script>
+  {% else %}
+  <div style="text-align:center;padding:1.6rem;color:var(--muted);font-size:.85rem">
+    Aucune vente confirmée pour l'instant. Le graphique s'affichera dès le premier paiement confirmé.
+  </div>
+  {% endif %}
 </div>
 
 <!-- Paiements FedaPay en attente (abonnements) -->
 {% set pending_payments = payments | selectattr("status", "equalto", "pending") | list %}
 {% if pending_payments %}
-<div class="card" style="margin-bottom:1.2rem;border-color:var(--gold)">
-  <div class="card-title" style="color:#92400e">⏳ Paiements FedaPay en attente ({{ pending_payments|length }})</div>
+<div class="card" style="margin-bottom:1.2rem;border-left:3px solid var(--amber)">
+  <div class="card-title">Paiements FedaPay en attente ({{ pending_payments|length }})</div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Client</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Réf. FedaPay</th><th>Date</th><th>Actions</th></tr></thead>
       <tbody>
         {% for p in pending_payments %}
         <tr>
-          <td><strong>{{ p.full_name }}</strong><br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
-          <td><span class="badge badge-blue">{{ plans[p.plan].label }}</span></td>
-          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
-          <td><span class="badge badge-green">{{ p.method|upper }}</span></td>
-          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference }}</td>
-          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+          <td><strong>{{ p.full_name }}</strong><br><span style="font-size:.73rem;color:var(--muted)">{{ p.email }}</span></td>
+          <td><span class="badge badge-blue badge-nodot">{{ plans[p.plan].label }}</span></td>
+          <td><strong style="font-variant-numeric:tabular-nums">{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td><span class="badge badge-gray badge-nodot">{{ p.method|upper }}</span></td>
+          <td class="mono" style="color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference }}</td>
+          <td class="mono" style="color:var(--muted);white-space:nowrap">{{ p.created_at[:16] }}</td>
           <td>
             <form method="POST" action="{{ url_for('confirm_payment', pid=p.id) }}" style="display:inline">
       {{ csrf_field() }}
-              <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Confirmer ce paiement FedaPay ?')">✅ Confirmer</button>
+              <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Confirmer ce paiement FedaPay ?')">Confirmer</button>
             </form>
           </td>
         </tr>
@@ -71,25 +196,25 @@
 {% if mk_payments is defined %}
 {% set mk_pending = mk_payments | selectattr("status", "equalto", "pending") | list %}
 {% if mk_pending %}
-<div class="card" style="margin-bottom:1.2rem;border-color:#229ED9">
-  <div class="card-title" style="color:#1a5276">📡 Routeurs supplémentaires — en attente ({{ mk_pending|length }})</div>
+<div class="card" style="margin-bottom:1.2rem;border-left:3px solid var(--blue)">
+  <div class="card-title">Routeurs supplémentaires — en attente ({{ mk_pending|length }})</div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Client</th><th>Routeur</th><th>IP</th><th>Plan</th><th>Montant</th><th>Réf. FedaPay</th><th>Date</th><th>Actions</th></tr></thead>
       <tbody>
         {% for p in mk_pending %}
         <tr>
-          <td><strong>{{ p.full_name }}</strong><br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
-          <td style="font-size:.84rem">{{ p.device_label or '—' }}</td>
-          <td style="font-family:monospace;font-size:.8rem;color:var(--dim)">{{ p.device_ip or '—' }}</td>
-          <td><span class="badge badge-blue">{{ plans[p.plan].label if p.plan in plans else p.plan }}</span></td>
-          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
-          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference }}</td>
-          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+          <td><strong>{{ p.full_name }}</strong><br><span style="font-size:.73rem;color:var(--muted)">{{ p.email }}</span></td>
+          <td style="font-size:.83rem">{{ p.device_label or '—' }}</td>
+          <td class="mono" style="color:var(--muted)">{{ p.device_ip or '—' }}</td>
+          <td><span class="badge badge-blue badge-nodot">{{ plans[p.plan].label if p.plan in plans else p.plan }}</span></td>
+          <td><strong style="font-variant-numeric:tabular-nums">{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td class="mono" style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference }}</td>
+          <td class="mono" style="color:var(--muted);white-space:nowrap">{{ p.created_at[:16] }}</td>
           <td>
             <form method="POST" action="{{ url_for('confirm_mikrotik_payment', pid=p.id) }}" style="display:inline">
       {{ csrf_field() }}
-              <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Activer ce routeur ?')">✅ Activer</button>
+              <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Activer ce routeur ?')">Activer</button>
             </form>
           </td>
         </tr>
@@ -103,29 +228,36 @@
 
 <!-- Abonnements -->
 <div class="card" style="margin-bottom:1.2rem">
-  <div class="card-title">📡 Abonnements ({{ subs|length }})</div>
-  <div class="table-wrap">
+  <div class="card-title with-action">
+    <span>Abonnements ({{ subs|length }})</span>
+    <form method="POST" action="{{ url_for('admin_clear_subscriptions') }}" style="margin:0"
+          onsubmit="return confirm('Vider l\'historique des abonnements ? Seuls les abonnements INACTIFS (expirés ou coupés) seront supprimés. Les abonnements actifs sont conservés.')">
+      {{ csrf_field() }}
+      <button type="submit" class="btn-clear">Vider les inactifs</button>
+    </form>
+  </div>
+  <div class="table-wrap scroll-cap">
     <table>
       <thead><tr><th>Client</th><th>Plan</th><th>Expire le</th><th>Déployé</th><th>Statut</th><th>Action</th></tr></thead>
       <tbody>
         {% for s in subs %}
         <tr>
-          <td><strong>{{ s.full_name }}</strong><br><span style="font-size:.75rem;color:var(--dim)">{{ s.email }}</span></td>
-          <td><span class="badge badge-blue">{{ plans[s.plan].label }}</span></td>
-          <td style="font-size:.83rem">{{ s.end_date[:10] }}</td>
-          <td>{% if s.provisioned %}<span class="badge badge-green">● Oui</span>{% else %}<span class="badge badge-gray">○ Non</span>{% endif %}</td>
+          <td><strong>{{ s.full_name }}</strong><br><span style="font-size:.73rem;color:var(--muted)">{{ s.email }}</span></td>
+          <td><span class="badge badge-blue badge-nodot">{{ plans[s.plan].label }}</span></td>
+          <td class="mono" style="font-size:.8rem">{{ s.end_date[:10] }}</td>
+          <td>{% if s.provisioned %}<span class="badge badge-green">Oui</span>{% else %}<span class="badge badge-gray">Non</span>{% endif %}</td>
           <td>{% if s.active %}<span class="badge badge-green">Actif</span>{% else %}<span class="badge badge-red">Inactif</span>{% endif %}</td>
           <td>
             <form method="POST" action="{{ url_for('toggle_sub', sid=s.id) }}">
       {{ csrf_field() }}
               <button type="submit" class="btn btn-sm {% if s.active %}btn-danger{% else %}btn-success{% endif %}">
-                {% if s.active %}⏹ Couper{% else %}▶ Activer{% endif %}
+                {% if s.active %}Couper{% else %}Activer{% endif %}
               </button>
             </form>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--dim);padding:1.5rem">Aucun abonnement.</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem">Aucun abonnement.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -134,27 +266,34 @@
 
 <!-- Historique paiements -->
 <div class="card" style="margin-bottom:1.2rem">
-  <div class="card-title">💰 Historique des paiements</div>
-  <div class="table-wrap">
+  <div class="card-title with-action">
+    <span>Historique des paiements</span>
+    <form method="POST" action="{{ url_for('admin_clear_payments') }}" style="margin:0"
+          onsubmit="return confirm('Vider l\'historique des paiements ? Les paiements en attente sont conservés. Le total des revenus affiché sera recalculé.')">
+      {{ csrf_field() }}
+      <button type="submit" class="btn-clear">Vider l'historique</button>
+    </form>
+  </div>
+  <div class="table-wrap scroll-cap">
     <table>
       <thead><tr><th>Client</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Réf. FedaPay</th><th>Statut</th><th>Date</th></tr></thead>
       <tbody>
         {% for p in payments %}
         <tr>
-          <td>{{ p.full_name }}<br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
+          <td>{{ p.full_name }}<br><span style="font-size:.73rem;color:var(--muted)">{{ p.email }}</span></td>
           <td>{{ plans[p.plan].label }}</td>
-          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
-          <td><span class="badge badge-gray">{{ p.method|upper }}</span></td>
-          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference or '—' }}</td>
+          <td><strong style="font-variant-numeric:tabular-nums">{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td><span class="badge badge-gray badge-nodot">{{ p.method|upper }}</span></td>
+          <td class="mono" style="color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference or '—' }}</td>
           <td>
-            {% if p.status=='confirmed' %}<span class="badge badge-green">✅ Confirmé</span>
-            {% elif p.status=='pending' %}<span class="badge badge-yellow">⏳ Attente</span>
-            {% else %}<span class="badge badge-red">✗ Rejeté</span>{% endif %}
+            {% if p.status=='confirmed' %}<span class="badge badge-green">Confirmé</span>
+            {% elif p.status=='pending' %}<span class="badge badge-yellow">Attente</span>
+            {% else %}<span class="badge badge-red">Rejeté</span>{% endif %}
           </td>
-          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+          <td class="mono" style="color:var(--muted);white-space:nowrap">{{ p.created_at[:16] }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">Aucun paiement.</td></tr>
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem">Aucun paiement.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -164,27 +303,34 @@
 <!-- Historique MikroTik -->
 {% if mk_payments is defined %}
 <div class="card" style="margin-bottom:1.2rem">
-  <div class="card-title">📡 Historique routeurs supplémentaires</div>
-  <div class="table-wrap">
+  <div class="card-title with-action">
+    <span>Historique routeurs supplémentaires</span>
+    <form method="POST" action="{{ url_for('admin_clear_mikrotik_payments') }}" style="margin:0"
+          onsubmit="return confirm('Vider l\'historique des routeurs supplémentaires ? Les paiements en attente sont conservés.')">
+      {{ csrf_field() }}
+      <button type="submit" class="btn-clear">Vider l'historique</button>
+    </form>
+  </div>
+  <div class="table-wrap scroll-cap">
     <table>
       <thead><tr><th>Client</th><th>Routeur</th><th>IP</th><th>Montant</th><th>Réf. FedaPay</th><th>Statut</th><th>Date</th></tr></thead>
       <tbody>
         {% for p in mk_payments %}
         <tr>
-          <td>{{ p.full_name }}<br><span style="font-size:.75rem;color:var(--dim)">{{ p.email }}</span></td>
-          <td style="font-size:.84rem">{{ p.device_label or '—' }}</td>
-          <td style="font-family:monospace;font-size:.8rem;color:var(--dim)">{{ p.device_ip or '—' }}</td>
-          <td><strong>{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
-          <td style="font-family:monospace;font-size:.78rem;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference or '—' }}</td>
+          <td>{{ p.full_name }}<br><span style="font-size:.73rem;color:var(--muted)">{{ p.email }}</span></td>
+          <td style="font-size:.83rem">{{ p.device_label or '—' }}</td>
+          <td class="mono" style="color:var(--muted)">{{ p.device_ip or '—' }}</td>
+          <td><strong style="font-variant-numeric:tabular-nums">{{ "{:,}".format(p.amount).replace(",","&thinsp;")|safe }} FCFA</strong></td>
+          <td class="mono" style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.reference or '—' }}</td>
           <td>
-            {% if p.status=='confirmed' %}<span class="badge badge-green">✅ Activé</span>
-            {% elif p.status=='pending' %}<span class="badge badge-yellow">⏳ Attente</span>
-            {% else %}<span class="badge badge-red">✗ Rejeté</span>{% endif %}
+            {% if p.status=='confirmed' %}<span class="badge badge-green">Activé</span>
+            {% elif p.status=='pending' %}<span class="badge badge-yellow">Attente</span>
+            {% else %}<span class="badge badge-red">Rejeté</span>{% endif %}
           </td>
-          <td style="font-size:.78rem;color:var(--dim);white-space:nowrap">{{ p.created_at[:16] }}</td>
+          <td class="mono" style="color:var(--muted);white-space:nowrap">{{ p.created_at[:16] }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">Aucun paiement MikroTik.</td></tr>
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem">Aucun paiement MikroTik.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -194,17 +340,25 @@
 
 <!-- Clients -->
 <div class="card" style="margin-bottom:1.2rem">
-  <div class="card-title">👥 Clients inscrits</div>
-  <div class="table-wrap">
+  <div class="card-title">Clients inscrits</div>
+  <div class="table-wrap scroll-cap">
     <table>
-      <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Inscrit le</th></tr></thead>
+      <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Inscrit le</th><th></th></tr></thead>
       <tbody>
         {% for c in clients %}{% if not c.is_admin %}
         <tr>
           <td><strong>{{ c.full_name }}</strong></td>
-          <td style="font-size:.84rem">{{ c.email }}</td>
-          <td style="font-size:.84rem;color:var(--dim)">{{ c.phone or '—' }}</td>
-          <td style="font-size:.78rem;color:var(--dim)">{{ c.created_at[:10] }}</td>
+          <td style="font-size:.83rem">{{ c.email }}</td>
+          <td class="mono" style="color:var(--muted)">{{ c.phone or '—' }}</td>
+          <td class="mono" style="color:var(--muted)">{{ c.created_at[:10] }}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <a href="{{ url_for('admin_client', cid=c.id) }}" class="btn btn-outline btn-sm">Voir</a>
+            <form method="POST" action="{{ url_for('admin_client_delete', cid=c.id) }}" style="display:inline"
+                  onsubmit="return confirm('Supprimer définitivement le compte de {{ c.full_name }} et toutes ses données ?')">
+              {{ csrf_field() }}
+              <button type="submit" class="btn btn-danger btn-sm">Suppr.</button>
+            </form>
+          </td>
         </tr>
         {% endif %}{% endfor %}
       </tbody>
@@ -212,21 +366,9 @@
   </div>
 </div>
 
-<!-- Changer MDP admin -->
-<div class="card" style="max-width:420px">
-  <div class="card-title">🔒 Changer le mot de passe admin</div>
-  <form method="POST" action="{{ url_for('admin_change_password') }}">
-      {{ csrf_field() }}
-    <div class="form-group">
-      <label class="form-label">Nouveau mot de passe</label>
-      <input class="form-input" type="password" name="new_password" required minlength="6" placeholder="••••••••">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Confirmer</label>
-      <input class="form-input" type="password" name="new_password2" required placeholder="••••••••">
-    </div>
-    <button type="submit" class="btn btn-outline btn-sm">Changer le mot de passe</button>
-  </form>
+<div style="font-size:.78rem;color:var(--muted);padding:.3rem .5rem">
+  Gestion du compte administrateur (nom, icône, mot de passe) :
+  <a href="{{ url_for('admin_account') }}" style="color:var(--accent);font-weight:600;text-decoration:none">Mon profil admin</a>
 </div>
 
 {% endblock %}

@@ -12,3 +12,4 @@ venv/
 .secret_key
 vps_ip.txt
 tenants/
+.mcp.json

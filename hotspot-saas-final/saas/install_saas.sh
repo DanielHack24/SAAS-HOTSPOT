@@ -62,11 +62,14 @@ info "Installation des fichiers du moteur…"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -f "$SCRIPT_DIR/core/tenant_db.py" ]; then
-    cp "$SCRIPT_DIR/core/tenant_db.py"   "$CORE_DIR/"
-    cp "$SCRIPT_DIR/core/provisioner.py" "$CORE_DIR/"
-    cp "$SCRIPT_DIR/src/tenant_hub.py"   "$SRC_DIR/"
-    cp "$SCRIPT_DIR/requirements.txt"    "$SAAS_DIR/"
-    ok "Fichiers Python copiés"
+    # Copie TOUT le core : le hub (tickets, access_log) et le service web
+    # (hotspot_sync, wg_store, secretbox, routeros, wireguard) en dépendent
+    # via PYTHONPATH=$CORE_DIR. Ne jamais cherry-picker : un module oublié
+    # fait crasher le service au démarrage (ModuleNotFoundError).
+    cp "$SCRIPT_DIR/core/"*.py            "$CORE_DIR/"
+    cp "$SCRIPT_DIR/src/tenant_hub.py"    "$SRC_DIR/"
+    cp "$SCRIPT_DIR/requirements.txt"     "$SAAS_DIR/"
+    ok "Fichiers Python copiés (core complet : $(ls "$SCRIPT_DIR/core/"*.py | wc -l) modules)"
 else
     error "Fichiers core introuvables. Lancez ce script depuis le dossier saas/"
 fi

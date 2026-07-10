@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Lot #{{ batch.id }} — HotspotPro{% endblock %}
+{% block topbar_title %}Lot #{{ batch.id }} — {{ seller_name }}{% endblock %}
+{% block topbar_subtitle %}{{ tickets|length }} tickets · profil {{ batch.profile }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.script-box{background:var(--navy);color:#C9E4D9;border-radius:8px;padding:1.1rem 1.2rem;
+  font-family:var(--fm);font-size:.74rem;line-height:1.6;white-space:pre-wrap;word-break:break-all;
+  border:1px solid rgba(255,255,255,.07);max-height:280px;overflow-y:auto;user-select:all}
+.tk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem}
+.tk{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.5rem .6rem;text-align:center;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1),border-color .2s,box-shadow .2s}
+.tk:hover{transform:translateY(-3px) scale(1.03);border-color:rgba(194,65,12,.4);box-shadow:0 8px 18px rgba(18,38,58,.12)}
+.tk .u{font-family:var(--fm);font-weight:700;font-size:.95rem;letter-spacing:.03em}
+.tk .p{font-family:var(--fm);font-size:.7rem;color:var(--muted)}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:500;background:var(--navy);color:#fff;
+  padding:.65rem 1.3rem;border-radius:8px;font-size:.84rem;font-weight:500;
+  box-shadow:0 8px 24px rgba(14,27,41,.3);transform:translateY(20px);opacity:0;
+  transition:transform .25s,opacity .25s;pointer-events:none}
+.toast.show{transform:none;opacity:1}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <a href="{{ url_for('seller_detail', sid=sid) }}" style="color:var(--muted);font-size:.83rem;text-decoration:none">&lsaquo; Retour au vendeur</a>
+
+  <div class="card rise d1">
+    <div class="card-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Création automatique
+    </div>
+    <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin:0 0 1rem">
+      Ces tickets sont <strong>créés automatiquement sur votre routeur</strong> via la connexion
+      sécurisée. Il ne vous reste qu'à <strong>imprimer les cartes</strong> à distribuer.
+      Si votre routeur n'est pas encore connecté, ils seront créés dès qu'il le sera.
+    </p>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <a href="{{ url_for('batch_print', sid=sid, bid=batch.id, size='small') }}" target="_blank" class="btn btn-primary sheen">Imprimer petit</a>
+      <a href="{{ url_for('batch_print', sid=sid, bid=batch.id, size='big') }}" target="_blank" class="btn btn-outline">Imprimer gros</a>
+      <form method="POST" action="{{ url_for('sellers_sync') }}" style="display:inline">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-outline">Synchroniser maintenant</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card rise d2" style="padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg)">
+      <div>
+        <div style="font-weight:600;font-size:.9rem">Méthode manuelle <span style="color:var(--muted);font-weight:400">(secours)</span></div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem">Uniquement si le routeur n'est pas connecté — à coller dans New Terminal ou via le .rsc</div>
+      </div>
+      <div style="display:flex;gap:.4rem">
+        <a href="{{ url_for('batch_rsc', sid=sid, bid=batch.id) }}" class="btn btn-outline btn-sm">.rsc</a>
+        <button onclick="copyScript()" id="copyBtn" class="btn btn-outline btn-sm">Copier</button>
+      </div>
+    </div>
+    <div style="padding:.9rem 1.25rem">
+      <textarea id="scriptRaw" style="display:none">{{ script }}</textarea>
+      <div class="script-box">{{ script }}</div>
+    </div>
+  </div>
+
+  <div class="card rise d3">
+    <div class="card-title">Tickets du lot</div>
+    <div class="tk-grid">
+      {% for t in tickets %}
+      <div class="tk">
+        <div class="u">{{ t.username }}</div>
+        {% if batch.pw_mode != 'same' %}<div class="p">mdp : {{ t.password }}</div>{% endif %}
+        {% if t.status == 'sold' %}<div class="p" style="color:var(--green)">vendu</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyScript(){
+  var el=document.getElementById('scriptRaw')
+  navigator.clipboard.writeText(el.value).then(function(){
+    var t=document.getElementById('toast'); t.textContent='Script copié'; t.classList.add('show')
+    var b=document.getElementById('copyBtn'); var o=b.innerHTML; b.innerHTML='Copié'; b.style.background='var(--green)'
+    setTimeout(function(){t.classList.remove('show');b.innerHTML=o;b.style.background=''},2500)
+  })
+}
+</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Connexion du routeur — HotspotPro{% endblock %}
+{% block topbar_title %}Connecter votre routeur{% endblock %}
+{% block topbar_subtitle %}Une seule fois, pour l'envoi automatique des tickets{% endblock %}
+
+{% block extra_head %}
+<style>
+.script-box{background:var(--navy);color:#C9E4D9;border-radius:8px;padding:1.1rem 1.2rem;
+  font-family:var(--fm);font-size:.74rem;line-height:1.6;white-space:pre-wrap;word-break:break-all;
+  border:1px solid rgba(255,255,255,.07);max-height:340px;overflow-y:auto;user-select:all}
+.step-row{display:flex;gap:.9rem;align-items:flex-start;padding:.85rem 0;border-bottom:1px solid var(--border)}
+.step-row:last-child{border-bottom:none}
+.step-num{width:26px;height:26px;background:var(--navy);border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-family:var(--fm);font-weight:500;color:#fff;font-size:.72rem;flex-shrink:0}
+.ci{background:var(--bg);border:1px solid var(--border);padding:.05rem .4rem;border-radius:4px;font-family:var(--fm);font-size:.8rem}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:500;background:var(--navy);color:#fff;padding:.65rem 1.3rem;
+  border-radius:8px;font-size:.84rem;font-weight:500;box-shadow:0 8px 24px rgba(14,27,41,.3);transform:translateY(20px);
+  opacity:0;transition:transform .25s,opacity .25s;pointer-events:none}
+.toast.show{transform:none;opacity:1}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  {% if error %}
+  <div class="alert alert-warning">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div style="font-size:.84rem;line-height:1.55">
+      {% if error == 'not_ready' %}La connexion sécurisée n'est pas encore activée sur la plateforme. Contactez l'administrateur.
+      {% else %}Cette fonctionnalité n'est pas disponible sur cette instance.{% endif %}
+    </div>
+  </div>
+  {% else %}
+
+  <div class="alert alert-info rise d1">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div style="font-size:.84rem;line-height:1.55">
+      Ce bloc connecte votre routeur à HotspotPro par un tunnel sécurisé. Une fois collé,
+      les tickets que vous générez seront <strong>créés automatiquement</strong> sur votre MikroTik.
+      À faire <strong>une seule fois</strong>. Nécessite <a href="{{ url_for('routeros_update_guide') }}" style="color:var(--accent);font-weight:600">RouterOS 7</a>.
+    </div>
+  </div>
+
+  <div class="card rise d2" style="padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg)">
+      <div>
+        <div style="font-weight:600;font-size:.9rem">Bloc de connexion sécurisée</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem">À coller dans New Terminal</div>
+      </div>
+      <button onclick="copyBlock()" id="copyBtn" class="btn btn-primary btn-sm sheen">Copier</button>
+    </div>
+    <div style="padding:.9rem 1.25rem">
+      <textarea id="blockRaw" style="display:none">{{ block }}</textarea>
+      <div class="script-box">{{ block }}</div>
+    </div>
+  </div>
+
+  <div class="card rise d3">
+    <div class="card-title">Comment l'installer</div>
+    <div class="step-row">
+      <div class="step-num">1</div>
+      <div><strong style="font-size:.89rem">Copier le bloc</strong>
+        <p style="font-size:.82rem;color:var(--muted);margin:.25rem 0 0;line-height:1.6">Cliquez sur <strong>Copier</strong> ci-dessus.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">2</div>
+      <div><strong style="font-size:.89rem">Ouvrir un terminal sur le MikroTik</strong>
+        <p style="font-size:.82rem;color:var(--muted);margin:.25rem 0 0;line-height:1.6">Winbox &rsaquo; <span class="ci">New Terminal</span>.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">3</div>
+      <div><strong style="font-size:.89rem">Coller et valider</strong>
+        <p style="font-size:.82rem;color:var(--muted);margin:.25rem 0 0;line-height:1.6">Collez le bloc, appuyez sur Entrée. Le routeur se connecte en quelques secondes — c'est terminé.</p></div>
+    </div>
+  </div>
+
+  <div class="alert alert-warning">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div style="font-size:.8rem;line-height:1.5">Ce bloc contient les identifiants uniques de votre routeur : ne le partagez pas.</div>
+  </div>
+
+  {% endif %}
+</div>
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyBlock(){
+  var el=document.getElementById('blockRaw'); if(!el) return
+  navigator.clipboard.writeText(el.value).then(function(){
+    var t=document.getElementById('toast'); t.textContent='Bloc copié'; t.classList.add('show')
+    var b=document.getElementById('copyBtn'); var o=b.innerHTML; b.innerHTML='Copié'; b.style.background='var(--green)'
+    setTimeout(function(){t.classList.remove('show');b.innerHTML=o;b.style.background=''},2500)
+  })
+}
+</script>
+{% endblock %}

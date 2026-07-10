@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Mettre à jour vers RouterOS 7 — HotspotPro{% endblock %}
+{% block topbar_title %}Mettre à jour vers RouterOS 7{% endblock %}
+{% block topbar_subtitle %}Prérequis avant la synchronisation automatique des tickets{% endblock %}
+
+{% block extra_head %}
+<style>
+.step{display:flex;gap:1rem;align-items:flex-start;padding:1.3rem 0;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:none}
+.step-num{flex-shrink:0;width:30px;height:30px;border-radius:8px;background:var(--navy);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-weight:600;font-size:.85rem}
+.step-num.ok{background:var(--green)}
+.step-body{flex:1;min-width:0}
+.step-body h3{margin:.1rem 0 .5rem;font-size:.98rem;font-family:var(--fh);letter-spacing:-.01em}
+.step-body p{margin:0 0 .6rem;font-size:.86rem;color:var(--muted);line-height:1.6}
+.shot{width:100%;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(16,24,32,.08);
+  display:block;transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s}
+.shot:hover{transform:scale(1.015);box-shadow:0 12px 30px rgba(16,24,32,.16)}
+.ci{background:var(--bg);border:1px solid var(--border);padding:.05rem .4rem;border-radius:4px;
+  font-family:var(--fm);font-size:.82rem}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
+
+  <div class="alert alert-warning">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div style="font-size:.84rem;line-height:1.55">
+      La création automatique des tickets exige <strong>RouterOS 7</strong>. Si votre routeur est
+      encore en version 6, suivez ce guide. <strong>Ne coupez pas le courant</strong> pendant la
+      mise à jour, et faites-la de préférence en dehors des heures de vente.
+    </div>
+  </div>
+
+  <div class="card rise d1">
+    <div class="card-title">Avant de commencer</div>
+    <p style="font-size:.86rem;color:var(--muted);line-height:1.6;margin:0">
+      Vérifiez votre version actuelle dans <span class="ci">System &rsaquo; Packages</span>
+      (colonne <em>Version</em> de la ligne <span class="ci">routeros</span>). Si elle commence par
+      <strong>7.</strong>, vous êtes déjà à jour — rien à faire. Si elle commence par <strong>6.</strong>,
+      suivez les étapes ci-dessous. Une sauvegarde préalable est conseillée
+      (<span class="ci">System &rsaquo; Backup</span>).
+    </p>
+  </div>
+
+  <div class="card rise d2">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Ouvrez System &rsaquo; Packages</h3>
+        <p>Dans le menu de gauche, cliquez sur <span class="ci">System</span> (1) puis sur
+           <span class="ci">Packages</span> (2).</p>
+        <img class="shot" src="{{ url_for('static', filename='img/tuto/01 System puis package.png') }}" alt="System puis Packages" loading="lazy">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Cliquez sur « Check For Updates »</h3>
+        <p>La fenêtre des paquets s'ouvre. À droite, sous <span class="ci">Configuration</span> (3),
+           cliquez sur <span class="ci">Check For Updates</span>. La ligne
+           <span class="ci">routeros</span> vous montre votre version installée.</p>
+        <img class="shot" src="{{ url_for('static', filename='img/tuto/02 check for update.png') }}" alt="Check For Updates" loading="lazy">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Lancez « Download&amp;Install »</h3>
+        <p>Le routeur compare votre version (<em>Installed Version</em>) à la dernière
+           (<em>Latest Version</em>). Laissez le canal sur <span class="ci">stable</span>, puis
+           cliquez sur <span class="ci">Download&amp;Install</span> (4).</p>
+        <img class="shot" src="{{ url_for('static', filename='img/tuto/03 download et install puis ok.png') }}" alt="Download et Install puis OK" loading="lazy">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Confirmez par « OK »</h3>
+        <p>Cliquez sur <span class="ci">OK</span> (5). Le routeur télécharge la mise à jour puis
+           <strong>redémarre tout seul</strong> pour l'installer. Ne débranchez rien.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num ok">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="step-body">
+        <h3>Attendez le redémarrage (2 à 3 minutes)</h3>
+        <p>Reconnectez-vous ensuite avec Winbox. Vérifiez dans
+           <span class="ci">System &rsaquo; Packages</span> que la ligne
+           <span class="ci">routeros</span> affiche bien une version <strong>7.x</strong>.
+           Votre routeur est prêt.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div style="font-size:.83rem;line-height:1.55">
+      Après la mise à jour, il est recommandé de mettre aussi à jour le firmware de la carte :
+      <span class="ci">System &rsaquo; RouterBOARD &rsaquo; Upgrade</span>, puis un dernier redémarrage.
+    </div>
+  </div>
+
+  <a href="{{ url_for('sellers') }}" class="btn btn-outline" style="justify-content:center">Retour aux vendeurs</a>
+
+</div>
+{% endblock %}

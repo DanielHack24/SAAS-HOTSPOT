@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Vendeurs — HotspotPro{% endblock %}
+{% block topbar_title %}Vendeurs & tickets{% endblock %}
+{% block topbar_subtitle %}Créez vos vendeurs et générez leurs tickets{% endblock %}
+
+{% block extra_head %}
+<style>
+.wrap{max-width:1460px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem}
+
+/* rangées centrées, passage à la ligne automatique (5-6 par ligne max) */
+.seller-track{display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;padding:.3rem 0}
+.seller-card{
+  flex:0 0 260px;box-sizing:border-box;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:1.5rem 1.6rem;text-decoration:none;color:inherit;display:block;
+  position:relative;overflow:hidden;box-shadow:var(--shadow-1);
+  transition:transform .28s cubic-bezier(.22,1,.36,1),box-shadow .28s,border-color .28s;
+  animation:cardIn .55s cubic-bezier(.22,1,.36,1) backwards;
+}
+@media(max-width:560px){.seller-card{flex-basis:100%}}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+.seller-card:hover{transform:translateY(-5px);box-shadow:0 20px 44px rgba(18,38,58,.14);border-color:rgba(194,65,12,.35)}
+.seller-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),#F59E0B);transform:scaleX(0);transform-origin:left;
+  transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.seller-card:hover::before{transform:scaleX(1)}
+/* nouveau vendeur : arrive par la droite + halo */
+.seller-card.isnew{animation:cardNew .6s cubic-bezier(.22,1,.36,1) backwards, glowNew 1.7s ease .55s}
+@keyframes cardNew{from{opacity:0;transform:translateX(60px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes glowNew{0%,100%{box-shadow:var(--shadow-1)}35%{box-shadow:0 0 0 3px rgba(194,65,12,.45)}}
+
+.seller-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1.05rem}
+.seller-ini{width:44px;height:44px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-family:var(--fh);font-weight:700;color:#fff;font-size:1.15rem;
+  background:linear-gradient(135deg,var(--navy),#24435f);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.seller-card:hover .seller-ini{transform:scale(1.1) rotate(-4deg)}
+.seller-ini.un{background:linear-gradient(135deg,#B45309,#F59E0B)}
+.seller-name{font-family:var(--fh);font-weight:600;font-size:1.12rem;letter-spacing:-.01em}
+.seller-stats{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.72rem}
+.seller-stats .n{font-family:var(--fh);font-weight:700;font-size:1.3rem;display:block;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.seller-stats .l{color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;font-size:.62rem}
+.seller-rev{margin-top:1.05rem;padding-top:.85rem;border-top:1px solid var(--border);font-size:.84rem;
+  display:flex;align-items:baseline;justify-content:space-between}
+.seller-rev b{font-family:var(--fh);font-variant-numeric:tabular-nums;color:var(--accent);font-size:1rem}
+.seller-go{transition:transform .25s}
+.seller-card:hover .seller-go{transform:translateX(4px)}
+.badge-un{display:inline-block;font-size:.6rem;font-weight:700;padding:.1rem .45rem;border-radius:999px;
+  background:#FCF5EA;color:#B45309;margin-left:.4rem;vertical-align:middle;letter-spacing:.03em}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+
+  <div class="alert alert-info rise d1">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div style="font-size:.83rem;line-height:1.55">
+      Créez un vendeur, puis générez ses tickets. Chaque ticket lui est
+      automatiquement rattaché. Les ventes de codes inconnus tombent dans « {{ unassigned }} ».
+      <br>Votre routeur doit être en <strong>RouterOS 7</strong> —
+      <a href="{{ url_for('routeros_update_guide') }}" style="color:var(--accent);font-weight:600">voir le guide de mise à jour</a>.
+    </div>
+  </div>
+
+  {% if sync and sync.pending %}
+  <div class="card rise d2" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-color:#EBDCC3;background:#FCF9F2">
+    <div style="display:flex;align-items:center;gap:.7rem;font-size:.86rem;color:#7C4A0B">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.2-8.5"/><polyline points="21 3 21 8 16 8"/></svg>
+      <span><strong>{{ sync.pending }}</strong> ticket(s) en attente de création sur votre routeur.</span>
+    </div>
+    <form method="POST" action="{{ url_for('sellers_sync') }}">
+      {{ csrf_field() }}
+      <button type="submit" class="btn btn-primary btn-sm sheen">Synchroniser maintenant</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card rise d2">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+      <div class="card-title" style="margin-bottom:0">Ajouter un vendeur</div>
+      {% if limits %}
+      <span style="font-size:.78rem;font-weight:600;font-variant-numeric:tabular-nums;
+        color:{% if seller_count >= limits.max_sellers %}var(--accent){% else %}var(--muted){% endif %}">
+        {{ seller_count }} / {{ limits.max_sellers }} vendeurs
+      </span>
+      {% endif %}
+    </div>
+    {% if limits and seller_count >= limits.max_sellers %}
+    <div style="padding:.75rem .9rem;background:var(--bg);border-radius:8px;font-size:.84rem;color:var(--muted);line-height:1.55">
+      Vous avez atteint la limite de <strong>{{ limits.max_sellers }} vendeurs</strong> de votre forfait.
+      <a href="{{ url_for('subscribe') }}?plan=12m" style="color:var(--accent);font-weight:600">Passez à un forfait supérieur</a>
+      pour en ajouter davantage.
+    </div>
+    {% else %}
+    <form method="POST" action="{{ url_for('seller_create') }}" id="addForm" style="display:flex;gap:.6rem;flex-wrap:wrap">
+      {{ csrf_field() }}
+      <input class="form-input" type="text" name="name" placeholder="Nom du vendeur (ex: Daniel)" required style="flex:1;min-width:200px">
+      <button type="submit" class="btn btn-primary sheen">Ajouter</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if sellers %}
+  <div class="seller-track" id="track">
+    {% for s in sellers %}
+    <a class="seller-card {% if request.args.get('new')|int == s.id %}isnew{% endif %}"
+       data-sid="{{ s.id }}" style="animation-delay:{{ '%.2f'|format(loop.index0 * 0.05) }}s"
+       href="{{ url_for('seller_detail', sid=s.id) }}">
+      <div class="seller-head">
+        <div class="seller-ini {% if s.name == unassigned %}un{% endif %}">{{ s.name[0]|upper }}</div>
+        <div class="seller-name">{{ s.name }}{% if s.name == unassigned %}<span class="badge-un">AUTO</span>{% endif %}</div>
+      </div>
+      <div class="seller-stats">
+        <div><span class="n count" data-to="{{ s.generated }}">0</span><span class="l">générés</span></div>
+        <div><span class="n count" data-to="{{ s.sold }}">0</span><span class="l">vendus</span></div>
+        <div><span class="n count" data-to="{{ s.stock }}">0</span><span class="l">en stock</span></div>
+      </div>
+      <div class="seller-rev">
+        <span>Recettes</span>
+        <b><span class="count" data-to="{{ s.revenue }}">0</span> FCFA
+          <svg class="seller-go" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-left:.2rem"><polyline points="9 18 15 12 9 6"/></svg>
+        </b>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card rise d3" style="text-align:center;color:var(--muted);padding:2.4rem">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:.6rem"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <div>Aucun vendeur pour l'instant. Ajoutez-en un ci-dessus pour commencer.</div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  var track = document.getElementById('track')
+  var form  = document.getElementById('addForm')
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // 1) Avant d'ajouter : mémoriser la position de chaque carte
+  if(form && track){
+    form.addEventListener('submit', function(){
+      try{
+        var pos = {}
+        track.querySelectorAll('.seller-card').forEach(function(c){
+          var r = c.getBoundingClientRect(); pos[c.dataset.sid] = [r.left, r.top]
+        })
+        sessionStorage.setItem('sellerPos', JSON.stringify(pos))
+      }catch(e){}
+    })
+  }
+
+  // 2) Après rechargement : les cartes existantes GLISSENT de leur ancienne
+  //    position vers la nouvelle (FLIP) ; la nouvelle arrive par la droite.
+  var saved = null
+  try{ saved = JSON.parse(sessionStorage.getItem('sellerPos') || 'null') }catch(e){}
+  sessionStorage.removeItem('sellerPos')
+
+  if(saved && track && !reduce){
+    var cards = track.querySelectorAll('.seller-card')
+    cards.forEach(function(c){
+      var old = saved[c.dataset.sid]
+      if(!old) return                       // carte nouvelle : garde son entrée par la droite
+      c.style.animation = 'none'            // pas d'entrée : elle vient de sa vraie place
+      var r = c.getBoundingClientRect()
+      var dx = old[0] - r.left, dy = old[1] - r.top
+      if(dx || dy){
+        c.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'
+        requestAnimationFrame(function(){
+          c.style.transition = 'transform .55s cubic-bezier(.22,1,.36,1)'
+          c.style.transform = ''
+        })
+      }
+    })
+  }
+})()
+</script>
+{% endblock %}
