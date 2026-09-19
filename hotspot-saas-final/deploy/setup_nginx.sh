@@ -69,12 +69,22 @@ fi
 CERT="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 KEY="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
+# ── Journal sans paramètres pour /t/ ──
+# Les anciens scripts MikroTik passaient le jeton du routeur dans l'URL : on
+# journalise le chemin ($uri) mais JAMAIS la query string, pour ne pas écrire
+# de jetons dans /var/log/nginx.
+IFS= read -r -d '' LOGFMT << LOGEOF || true
+log_format hotspot_noquery '\$remote_addr - [\$time_local] "\$request_method \$uri \$server_protocol" '
+                           '\$status \$body_bytes_sent "\$http_user_agent"';
+LOGEOF
+
 # ── Bloc de proxy commun (réutilisé en HTTP et en HTTPS) ──
 IFS= read -r -d '' PROXY_BLOCK << PROXYEOF || true
     client_max_body_size 2M;
 
     # API tenants (hub multi-tenant) — appelée par les routeurs MikroTik
     location ^~ /t/ {
+        access_log         /var/log/nginx/access.log hotspot_noquery;
         proxy_pass         http://127.0.0.1:$HUB_PORT;
         proxy_set_header   Host \$host;
         proxy_set_header   X-Real-IP \$remote_addr;
@@ -107,6 +117,7 @@ PROXYEOF
 # étant redirigé vers HTTPS. L'endpoint est protégé par le token du routeur.
 IFS= read -r -d '' T_BLOCK << TEOF || true
     location ^~ /t/ {
+        access_log         /var/log/nginx/access.log hotspot_noquery;
         proxy_pass         http://127.0.0.1:$HUB_PORT;
         proxy_set_header   Host \$host;
         proxy_set_header   X-Real-IP \$remote_addr;
@@ -121,6 +132,7 @@ if [ -n "$DOMAIN" ] && [ -f "$CERT" ]; then
   info "Certificat trouvé pour $DOMAIN — configuration HTTPS (80 redirige vers 443)…"
   mkdir -p /var/www/html
   cat > "$SITE" << CONFEOF
+$LOGFMT
 # Port 80 : API tenant (MikroTik) + challenge ACME, le reste redirigé en HTTPS
 server {
     listen 80 default_server;
@@ -156,6 +168,7 @@ else
     info "Mode HTTP (port 80), sans domaine."
   fi
   cat > "$SITE" << CONFEOF
+$LOGFMT
 server {
     listen 80;
     server_name $SERVER_NAME;

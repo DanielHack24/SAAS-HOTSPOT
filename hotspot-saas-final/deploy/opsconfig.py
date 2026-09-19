@@ -26,6 +26,7 @@ sys.path.insert(0, WEBAPP_DIR)
 OPS_KEYS = [
     "admin_bot_token", "admin_chat_id",
     "watchdog_disk_alert", "watchdog_auto_restart",
+    "watchdog_cpu_alert", "watchdog_steal_alert",
     "backup_keep_days", "backup_dest_type", "backup_host", "backup_smb_share",
     "backup_sftp_port", "backup_remote_path", "backup_user", "backup_pass",
     "backup_rclone_remote",
@@ -37,6 +38,8 @@ ENV_FALLBACK = {
     "admin_chat_id":         "ADMIN_CHAT_ID",
     "watchdog_disk_alert":   "WATCHDOG_DISK_ALERT",
     "watchdog_auto_restart": "WATCHDOG_AUTO_RESTART",
+    "watchdog_cpu_alert":    "WATCHDOG_CPU_ALERT",
+    "watchdog_steal_alert":  "WATCHDOG_STEAL_ALERT",
     "backup_keep_days":      "BACKUP_KEEP_DAYS",
     "backup_dest_type":      "BACKUP_DEST_TYPE",
     "backup_host":           "BACKUP_HOST",

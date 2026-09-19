@@ -3,6 +3,8 @@ routes_api.py — API JSON du dashboard + cron d'expiration
 """
 import json
 import secrets
+import threading
+from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime
 
 from flask import request, session, jsonify
@@ -94,6 +96,30 @@ def api_profiles():
 # CRON — Rattrapage de synchronisation des tickets
 # ═══════════════════════════════════════════════
 
+# Les routeurs sont traités EN PARALLÈLE : chaque routeur hors ligne coûte
+# jusqu'au timeout réseau (8 s), et en série une quinzaine de routeurs éteints
+# suffisait à dépasser le timeout gunicorn (120 s) -> requête tuée, clients
+# suivants jamais synchronisés. La requête attend au plus SYNC_BUDGET_S ; les
+# synchros plus longues continuent en arrière-plan. Un slug encore en cours
+# (cron précédent) n'est pas relancé.
+SYNC_WORKERS  = 8
+SYNC_BUDGET_S = 90
+
+_sync_pool    = ThreadPoolExecutor(max_workers=SYNC_WORKERS, thread_name_prefix="cron-sync")
+_sync_running: set[str] = set()
+_sync_lock    = threading.Lock()
+
+
+def _sync_one(push, slug: str) -> dict:
+    try:
+        return {"slug": slug, **push(slug)}
+    except Exception as e:
+        return {"slug": slug, "status": "error", "error": str(e)}
+    finally:
+        with _sync_lock:
+            _sync_running.discard(slug)
+
+
 @app.route("/cron/sync_tickets")
 def cron_sync_tickets():
     """Repousse vers les routeurs les tickets restés en attente (routeur
@@ -113,17 +139,26 @@ def cron_sync_tickets():
     """).fetchall()
     conn.close()
 
-    results = []
+    futures, skipped = [], []
     for row in subs:
         slug = row["slug"]
-        try:
-            res = hotspot_sync.push_pending(slug)
-            if res.get("pushed") or res.get("pending"):
-                results.append({"slug": slug, **res})
-        except Exception as e:
-            results.append({"slug": slug, "status": "error", "error": str(e)})
+        with _sync_lock:
+            if slug in _sync_running:
+                skipped.append(slug)
+                continue
+            _sync_running.add(slug)
+        futures.append(_sync_pool.submit(_sync_one, hotspot_sync.push_pending, slug))
+
+    done, not_done = wait(futures, timeout=SYNC_BUDGET_S)
+    results = []
+    for f in done:
+        res = f.result()
+        if res.get("pushed") or res.get("pending") or res.get("status") == "error":
+            results.append(res)
 
     return jsonify({"synced": results,
+                    "still_running": len(not_done),
+                    "skipped": skipped,
                     "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
 
 

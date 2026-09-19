@@ -24,6 +24,16 @@ def health_url(vps_host: str, slug: str) -> str:
     return f"{_scheme()}://{vps_host}/t/{slug}/health"
 
 
+def _token_header(token: str) -> str:
+    """Option /tool fetch qui transporte le jeton dans un EN-TÊTE HTTP.
+
+    Dans l'URL, le jeton finissait dans les journaux d'accès du serveur (et de
+    tout intermédiaire). En en-tête, il n'est plus journalisé. Le jeton est
+    généré par secrets.token_urlsafe (lettres, chiffres, - et _) : aucun
+    caractère à échapper pour RouterOS."""
+    return f' http-header-field="X-Router-Token: {token}"' if token else ""
+
+
 def _oneliner_body(url: str, token: str, validity: str = "") -> str:
     """Corps du script On Login : signale simplement la vente à l'API.
 
@@ -32,13 +42,12 @@ def _oneliner_body(url: str, token: str, validity: str = "") -> str:
     se fait automatiquement via le tunnel — le script On Login ne sert donc
     plus qu'à envoyer la notification de vente en temps réel. Le hub retrouve
     le vendeur et le profil du ticket dans sa base à partir de l'identifiant."""
-    token_param = f"&token={token}" if token else ""
     fetch_mode  = "https" if url.startswith("https://") else "http"
     return (
         f':local identity [/system identity get name]; '
         f':local serial ""; :do {{:set serial [/system routerboard get serial-number]}} on-error={{}}; '
         f'/tool fetch url=("{url}?username=" . $user . "&router=" . $identity . '
-        f'"&serial=" . $serial . "{token_param}") '
+        f'"&serial=" . $serial){_token_header(token)} '
         f'mode={fetch_mode} keep-result=no dst-path="/tmp/hs.tmp"'
     )
 
@@ -82,12 +91,11 @@ def _notify_fetch(url: str, token: str) -> str:
     Le hostname est lu en ligne ; le numéro de série (empreinte matérielle
     stable pour la détection de partage) est résolu à part, avec garde pour les
     modèles sans routerboard (CHR/x86)."""
-    token_param = f"&token={token}" if token else ""
     fetch_mode  = "https" if url.startswith("https://") else "http"
     return (
         f':local serial ""; :do {{:set serial [/system routerboard get serial-number]}} on-error={{}}; '
         f'/tool fetch url=("{url}?username=" . $user . '
-        f'"&router=" . [/system identity get name] . "&serial=" . $serial . "{token_param}") '
+        f'"&router=" . [/system identity get name] . "&serial=" . $serial){_token_header(token)} '
         f'mode={fetch_mode} keep-result=no dst-path="/tmp/hs.tmp"'
     )
 

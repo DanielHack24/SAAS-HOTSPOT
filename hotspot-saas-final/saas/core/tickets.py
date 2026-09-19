@@ -20,6 +20,8 @@ import secrets
 import sqlite3
 import threading
 
+import dbconn
+
 SAAS_DIR = os.environ.get("HOTSPOT_SAAS_DIR", "/opt/hotspot-saas")
 
 UNASSIGNED = "Non attribué"      # vendeur réservé pour les codes inconnus
@@ -61,12 +63,9 @@ def _lock(db_path: str) -> threading.Lock:
 
 
 def _connect(db_path: str) -> sqlite3.Connection:
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    conn = sqlite3.connect(db_path, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=10000")
+    conn = dbconn.connect(db_path)
     conn.execute("PRAGMA foreign_keys=ON")
+    dbconn.keep_open(db_path)
     return conn
 
 
@@ -74,7 +73,23 @@ def _connect(db_path: str) -> sqlite3.Connection:
 # SCHÉMA
 # ═══════════════════════════════════════════════
 
+_schema_ok: set[str] = set()
+_schema_guard = threading.Lock()
+
+
 def ensure_schema(db_path: str):
+    """Crée/migre le schéma. Appelée avant chaque opération, mais n'agit
+    qu'une fois par base et par processus (tant que le fichier existe) :
+    la refaire à chaque vente coûtait une ouverture de base de plus."""
+    key = os.path.abspath(db_path)
+    if key in _schema_ok and os.path.exists(db_path):
+        return
+    with _schema_guard:
+        _ensure_schema_now(db_path)
+        _schema_ok.add(key)
+
+
+def _ensure_schema_now(db_path: str):
     conn = _connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sellers (

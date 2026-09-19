@@ -3,6 +3,7 @@ routes_admin.py — Tableau de bord administrateur
 """
 from flask import render_template, request, redirect, url_for, session, flash
 
+import re
 import config
 import fedapay
 import services
@@ -518,10 +519,12 @@ def _test_brevo_key():
         flash("Clé Brevo invalide ou service injoignable.", "error")
 
 
+_SAFE_REMOTE_FIELD = re.compile(r"[A-Za-z0-9._@/ -]+")
+
+
 def _rclone_backup_dest():
     """Construit la destination rclone à partir des réglages admin.
     Retourne (dest, message_erreur) — dest None si non configuré."""
-    import shlex
     dtype = config._setting("backup_dest_type") or "none"
     if dtype == "none":
         return None, "Aucune copie distante configurée (type « Locale uniquement »)."
@@ -535,6 +538,14 @@ def _rclone_backup_dest():
     path = config._setting("backup_remote_path") or "hotspotpro"
     if not host or not user:
         return None, "Hôte et nom d'utilisateur requis."
+    # Ces valeurs sont insérées dans une chaîne de connexion rclone : un
+    # guillemet, une virgule ou un deux-points permettrait d'y ajouter des
+    # options arbitraires.
+    fields = [host, user, path, config._setting("backup_smb_share") or "",
+              config._setting("backup_sftp_port") or "22"]
+    if not all(_SAFE_REMOTE_FIELD.fullmatch(f) for f in fields if f):
+        return None, ("Caractère interdit dans la configuration de sauvegarde "
+                      "(autorisés : lettres, chiffres, . _ @ / - et espace).")
     try:
         import subprocess
         ob = subprocess.run(["rclone", "obscure", pwd], capture_output=True,

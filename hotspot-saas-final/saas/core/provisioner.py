@@ -16,7 +16,7 @@ import os, json
 import urllib.request
 
 from tenant_db import (update_tenant, set_tenant_active, delete_tenant,
-                       get_tenant, get_last_activity as _get_last_activity)
+                       get_last_activity as _get_last_activity)
 
 SAAS_DIR    = os.environ.get("HOTSPOT_SAAS_DIR", "/opt/hotspot-saas")
 TENANTS_DIR = os.path.join(SAAS_DIR, "tenants")

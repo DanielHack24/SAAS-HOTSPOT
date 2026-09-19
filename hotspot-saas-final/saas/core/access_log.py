@@ -16,6 +16,8 @@ import ipaddress
 import os
 import sqlite3
 
+import dbconn
+
 SAAS_DIR   = os.environ.get("HOTSPOT_SAAS_DIR", "/opt/hotspot-saas")
 CENTRAL_DB = os.path.join(SAAS_DIR, "central.db")
 
@@ -43,12 +45,11 @@ def is_public_router_ip(ip: str) -> bool:
 
 
 def _conn() -> sqlite3.Connection:
-    os.makedirs(os.path.dirname(CENTRAL_DB), exist_ok=True)
-    c = sqlite3.connect(CENTRAL_DB, timeout=10)
-    c.row_factory = sqlite3.Row
-    c.execute("PRAGMA journal_mode=WAL")
-    c.execute("PRAGMA busy_timeout=10000")
-    return c
+    # central.db est écrite à chaque notification de vente : connexion
+    # témoin permanente + écritures allégées (voir dbconn.py).
+    conn = dbconn.connect(CENTRAL_DB)
+    dbconn.keep_open(CENTRAL_DB)
+    return conn
 
 
 def ensure_schema():

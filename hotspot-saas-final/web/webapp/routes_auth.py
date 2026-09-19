@@ -22,9 +22,16 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         pwd   = request.form.get("password", "")
-        rl_key = f"login:{request.remote_addr}:{email}"
+        ip = request.remote_addr
+        rl_key = f"login:{ip}:{email}"
+        # Trois compteurs : couple IP+compte (usage normal), compte seul
+        # (attaque d'un compte depuis beaucoup d'IP) et IP seule (essai
+        # de nombreux comptes depuis une même IP).
+        rl_limits = [(rl_key, 8, 600),
+                     (f"login-email:{email}", 20, 900),
+                     (f"login-ip:{ip}", 30, 600)]
 
-        if rate_limited(rl_key):
+        if any(rate_limited(k, m, w) for k, m, w in rl_limits):
             flash("Trop de tentatives. Réessayez dans quelques minutes.", "error")
             return render_template("login.html")
 
@@ -40,6 +47,7 @@ def login():
                 conn.commit()
             conn.close()
             clear_attempts(rl_key)
+            clear_attempts(f"login-email:{email}")
             session["client_id"] = row["id"]
             session["is_admin"]  = bool(row["is_admin"])
             session["full_name"] = row["full_name"]
@@ -50,7 +58,8 @@ def login():
             return redirect(url_for("admin_dashboard" if row["is_admin"] else "dashboard"))
 
         conn.close()
-        record_attempt(rl_key)
+        for k, _, _ in rl_limits:
+            record_attempt(k)
         flash("Email ou mot de passe incorrect.", "error")
 
     return render_template("login.html")

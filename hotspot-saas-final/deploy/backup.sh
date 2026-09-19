@@ -8,6 +8,17 @@
 #
 # Installé par install_ops.sh dans /usr/local/bin/hotspotpro-backup
 # et lancé chaque nuit par cron. Config : /etc/hotspotpro/ops.env
+#
+# CHIFFREMENT : si BACKUP_PASSPHRASE est défini dans ops.env (install_ops.sh
+# le génère), l'archive est chiffrée (GPG, AES-256) avant d'être gardée ou
+# envoyée. Sans phrase secrète, la copie DISTANTE est refusée : l'archive
+# contient la clé maîtresse qui déchiffre tous les secrets de la plateforme.
+# La phrase secrète n'est jamais incluse dans l'archive : conservez-la hors
+# du serveur (gestionnaire de mots de passe), sinon l'archive est perdue.
+#
+# Restauration :
+#   gpg --decrypt hotspotpro_AAAAMMJJ_HHMMSS.tar.gz.gpg > sauvegarde.tar.gz
+#   tar -xzf sauvegarde.tar.gz -C /tmp/restauration
 # ══════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -98,11 +109,27 @@ fi
 [ -f "$SAAS_DIR/.env" ] && cp "$SAAS_DIR/.env" "$WORK/saas.env"
 [ -f "$WEB_DIR/webapp/.secret_key" ] && cp "$WEB_DIR/webapp/.secret_key" "$WORK/web.secret_key"
 
-# ── Archive + rotation ──
+# ── Archive (+ chiffrement) + rotation ──
 tar -czf "$ARCHIVE" -C "$WORK" .
 chmod 600 "$ARCHIVE"
 rm -rf "$WORK"
-find "$BACKUP_DIR" -maxdepth 1 -name 'hotspotpro_*.tar.gz' -mtime +"$KEEP_DAYS" -delete
+
+ENCRYPTED=0
+if [ -n "${BACKUP_PASSPHRASE:-}" ]; then
+  # Trousseau GPG jetable : ne touche pas à celui de root. La phrase secrète
+  # passe par un descripteur de fichier, jamais en argument (visible par ps).
+  GH=$(mktemp -d)
+  gpg --homedir "$GH" --batch --yes --quiet --pinentry-mode loopback \
+      --symmetric --cipher-algo AES256 --passphrase-fd 3 \
+      -o "$ARCHIVE.gpg" "$ARCHIVE" 3<<< "$BACKUP_PASSPHRASE"
+  gpgconf --homedir "$GH" --kill all > /dev/null 2>&1 || true
+  rm -rf "$GH"
+  chmod 600 "$ARCHIVE.gpg"
+  rm -f "$ARCHIVE"
+  ARCHIVE="$ARCHIVE.gpg"
+  ENCRYPTED=1
+fi
+find "$BACKUP_DIR" -maxdepth 1 -name 'hotspotpro_*.tar.gz*' -mtime +"$KEEP_DAYS" -delete
 
 SIZE=$(du -h "$ARCHIVE" | cut -f1)
 logger -t hotspotpro-backup "Sauvegarde OK : $ARCHIVE ($SIZE)"
@@ -117,6 +144,23 @@ REMOTE_PATH="${BACKUP_REMOTE_PATH:-hotspotpro}"
 
 remote_copy() {
   [ "$DEST_TYPE" = "none" ] && return 0
+
+  if [ "$ENCRYPTED" != "1" ]; then
+    logger -t hotspotpro-backup "Copie distante REFUSEE : archive non chiffree (BACKUP_PASSPHRASE absent de $OPS_ENV)"
+    telegram_alert "ALERTE HotspotPro : copie distante des sauvegardes BLOQUEE sur $(hostname) : aucune phrase secrete de chiffrement (BACKUP_PASSPHRASE). Relancer install_ops.sh pour en generer une. La sauvegarde reste sur le VPS."
+    return 1
+  fi
+
+  # Champs de connexion : aucun caractère capable de modifier la chaîne de
+  # connexion rclone (guillemet, virgule, deux-points…).
+  local f
+  for f in "${BACKUP_HOST:-}" "${BACKUP_USER:-}" "${BACKUP_SMB_SHARE:-}" "$REMOTE_PATH" "${BACKUP_SFTP_PORT:-22}"; do
+    if [[ -n "$f" && ! "$f" =~ ^[A-Za-z0-9._@/\ -]+$ ]]; then
+      logger -t hotspotpro-backup "Copie distante refusee : caractere interdit dans la configuration"
+      telegram_alert "ALERTE HotspotPro : copie distante refusee, la configuration de sauvegarde contient un caractere interdit. Corriger dans Administration > Configuration."
+      return 1
+    fi
+  done
 
   if ! command -v rclone > /dev/null 2>&1; then
     logger -t hotspotpro-backup "Copie distante demandee ($DEST_TYPE) mais rclone est absent"

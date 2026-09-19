@@ -1,7 +1,7 @@
 """
 security.py — Mots de passe, CSRF, rate limiting, décorateurs d'accès
 """
-import time, hashlib, secrets, threading
+import time, hashlib, secrets, threading, sqlite3
 from functools import wraps
 
 from flask import session, redirect, url_for, request, abort
@@ -91,28 +91,71 @@ def validate_csrf():
 
 
 # ═══════════════════════════════════════════════
-# RATE LIMITING (en mémoire, par worker)
+# RATE LIMITING (partagé entre workers, en base)
 # ═══════════════════════════════════════════════
+# Les tentatives sont stockées dans la base web (table rate_attempts) : les
+# workers gunicorn partagent donc le même compteur (en mémoire, chaque worker
+# avait le sien et la limite effective était multipliée). Repli en mémoire
+# si la base est indisponible, pour ne jamais bloquer une connexion.
+
+RL_RETENTION_S = 86400   # purge des tentatives de plus de 24 h
 
 _attempts: dict[str, list[float]] = {}
 _attempts_lock = threading.Lock()
+
+
+def _rl_conn() -> sqlite3.Connection:
+    from db import get_db   # import tardif : db importe déjà security
+    conn = get_db()
+    conn.execute("""CREATE TABLE IF NOT EXISTS rate_attempts (
+                        key TEXT NOT NULL, ts REAL NOT NULL)""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_rate_attempts ON rate_attempts(key, ts)")
+    return conn
 
 
 def rate_limited(key: str, max_attempts: int = 8, window_s: int = 600) -> bool:
     """True si `key` a dépassé `max_attempts` sur les `window_s` dernières
     secondes. Appeler après chaque tentative échouée via record_attempt."""
     now = time.time()
-    with _attempts_lock:
-        stamps = [t for t in _attempts.get(key, []) if now - t < window_s]
-        _attempts[key] = stamps
-        return len(stamps) >= max_attempts
+    try:
+        conn = _rl_conn()
+        try:
+            n = conn.execute("SELECT COUNT(*) FROM rate_attempts WHERE key=? AND ts>?",
+                             (key, now - window_s)).fetchone()[0]
+        finally:
+            conn.close()
+        return n >= max_attempts
+    except sqlite3.Error:
+        with _attempts_lock:
+            stamps = [t for t in _attempts.get(key, []) if now - t < window_s]
+            _attempts[key] = stamps
+            return len(stamps) >= max_attempts
 
 
 def record_attempt(key: str):
-    with _attempts_lock:
-        _attempts.setdefault(key, []).append(time.time())
+    now = time.time()
+    try:
+        conn = _rl_conn()
+        try:
+            conn.execute("INSERT INTO rate_attempts (key, ts) VALUES (?, ?)", (key, now))
+            conn.execute("DELETE FROM rate_attempts WHERE ts<?", (now - RL_RETENTION_S,))
+            conn.commit()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        with _attempts_lock:
+            _attempts.setdefault(key, []).append(now)
 
 
 def clear_attempts(key: str):
+    try:
+        conn = _rl_conn()
+        try:
+            conn.execute("DELETE FROM rate_attempts WHERE key=?", (key,))
+            conn.commit()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        pass
     with _attempts_lock:
         _attempts.pop(key, None)

@@ -35,6 +35,7 @@ ROUTER_LISTEN     = 13231                # port d'écoute WG côté routeur
 API_SVC           = "www"               # REST API RouterOS (HTTP, dans le tunnel chiffré)
 API_PORT          = 80
 API_GROUP         = "hotspotpro"
+API_POLICY        = "api,rest-api,read,write,test,web"
 API_USER          = "hotspotpro"
 
 
@@ -126,11 +127,15 @@ def render_client_block(*, tunnel_ip: str, router_private_key: str,
             f"/ip/address find interface={WG_IFACE}",
             f'/ip/address/add interface={WG_IFACE} address={tunnel_ip}/16',
         ),
-        guard(
-            f"/user/group find name={API_GROUP}",
-            f'/user/group/add name={API_GROUP} '
-            f'policy=api,rest-api,read,write,test,winbox,web,password,sensitive',
-        ),
+        # Droits MINIMAUX : gestion des tickets et des scripts via l'API REST.
+        # Retirés : winbox (connexion Winbox depuis n'importe où avec ces
+        # identifiants), password, sensitive (lecture des mots de passe et
+        # clés du routeur). Si le serveur est compromis, l'attaquant ne peut
+        # ni lire les secrets du routeur ni s'y connecter en Winbox. Le groupe
+        # est mis à jour s'il existe déjà (routeurs configurés avant).
+        f':if ([/user/group find name={API_GROUP}]="") '
+        f'do={{/user/group/add name={API_GROUP} policy={API_POLICY}}} '
+        f'else={{/user/group/set [find name={API_GROUP}] policy={API_POLICY}}}',
         # Compte API : créé s'il manque, sinon mot de passe/groupe remis à jour.
         f':if ([/user find name={api_user}]="") '
         f'do={{/user/add name={api_user} password="{api_pass}" group={API_GROUP} '

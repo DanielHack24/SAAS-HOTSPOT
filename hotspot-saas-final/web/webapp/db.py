@@ -14,6 +14,9 @@ def get_db() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA busy_timeout = 10000")
+    # En WAL, NORMAL ne peut pas corrompre la base et évite une écriture
+    # physique du disque à chaque commit (voir saas/core/dbconn.py).
+    conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
 
@@ -171,6 +174,14 @@ def init_web_db():
             PRIMARY KEY (client_id, kind)
         )
     """)
+    # Tentatives de connexion (rate limiting partagé entre workers)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS rate_attempts (
+            key TEXT NOT NULL,
+            ts  REAL NOT NULL
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_rate_attempts ON rate_attempts(key, ts)")
 
     # Migrations silencieuses pour bases existantes
     for ddl in (

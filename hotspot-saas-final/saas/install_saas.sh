@@ -214,6 +214,8 @@ Group=$APP_USER
 WorkingDirectory=$SRC_DIR
 EnvironmentFile=$SAAS_DIR/.env
 ExecStart=$VENV/bin/gunicorn -w 1 --threads 16 -b 127.0.0.1:$HUB_PORT tenant_hub:app
+# Bases SQLite gardées ouvertes (dbconn.keep_open) : marge de descripteurs
+LimitNOFILE=65536
 Restart=always
 RestartSec=5
 StandardOutput=journal

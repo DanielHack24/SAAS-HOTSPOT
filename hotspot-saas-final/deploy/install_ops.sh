@@ -46,6 +46,18 @@ if [ -f "$OPS_ENV" ]; then
   EXISTING_CHAT=$(grep '^ADMIN_CHAT_ID=' "$OPS_ENV" | cut -d'=' -f2- || true)
 fi
 
+# Phrase secrète de chiffrement des sauvegardes : conservée si elle existe
+# (sinon les anciennes archives deviendraient illisibles), générée sinon.
+EXISTING_PASSPHRASE=""
+[ -f "$OPS_ENV" ] && EXISTING_PASSPHRASE=$(grep '^BACKUP_PASSPHRASE=' "$OPS_ENV" | cut -d'=' -f2- || true)
+NEW_PASSPHRASE=0
+if [ -n "$EXISTING_PASSPHRASE" ]; then
+  BACKUP_PASSPHRASE="$EXISTING_PASSPHRASE"
+else
+  BACKUP_PASSPHRASE=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+  NEW_PASSPHRASE=1
+fi
+
 read -rp "  > Token du bot d'alerte [${EXISTING_BOT:-vide = alertes désactivées}] : " ADMIN_BOT_TOKEN
 ADMIN_BOT_TOKEN="${ADMIN_BOT_TOKEN:-$EXISTING_BOT}"
 read -rp "  > Chat ID admin [${EXISTING_CHAT:-vide}] : " ADMIN_CHAT_ID
@@ -64,9 +76,26 @@ BACKUP_KEEP_DAYS=14
 BACKUP_DEST_TYPE=none
 WATCHDOG_AUTO_RESTART=1
 WATCHDOG_DISK_ALERT=90
+WATCHDOG_CPU_ALERT=85
+WATCHDOG_STEAL_ALERT=30
+# Chiffrement des sauvegardes (à conserver AUSSI hors du serveur)
+BACKUP_PASSPHRASE=$BACKUP_PASSPHRASE
 ENVEOF
 chmod 600 "$OPS_ENV"
 ok "Configuration écrite : $OPS_ENV"
+
+if [ "$NEW_PASSPHRASE" = "1" ]; then
+  sep
+  echo -e "  ${Y}PHRASE SECRÈTE DES SAUVEGARDES (nouvelle) :${R}"
+  echo
+  echo -e "      ${B}$BACKUP_PASSPHRASE${R}"
+  echo
+  echo -e "  ${Y}Copiez-la MAINTENANT dans un gestionnaire de mots de passe.${R}"
+  echo -e "  ${Y}Sans elle, les sauvegardes chiffrées sont IRRÉCUPÉRABLES si le${R}"
+  echo -e "  ${Y}serveur est perdu. Elle n'est jamais envoyée avec les sauvegardes.${R}"
+  sep
+  read -rp "  > Appuyez sur Entrée une fois la phrase secrète sauvegardée… " _
+fi
 
 if [ -n "$ADMIN_BOT_TOKEN" ] && [ -n "$ADMIN_CHAT_ID" ]; then
   HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
@@ -87,7 +116,7 @@ fi
 # ══════════════════════════════════════════════
 sep
 echo -e "  ${B}2/5 — Sauvegardes automatiques${R}"
-apt-get install -y -qq sqlite3 curl > /dev/null
+apt-get install -y -qq sqlite3 curl gnupg > /dev/null
 
 # rclone : requis pour la copie distante SMB/SFTP/cloud. La version des
 # dépôts Debian est parfois trop ancienne pour le backend SMB ; on installe

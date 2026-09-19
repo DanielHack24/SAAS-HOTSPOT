@@ -14,11 +14,11 @@ Avantages vs 1 processus/client :
   - tarifs rechargés à chaud (plus besoin de redéployer)
   - provisioning = simple INSERT en base + POST /reload
 """
-import os, sqlite3, threading, json, time, html, secrets
+import os, sqlite3, threading, json, time, html, secrets, hashlib
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
-import urllib.request
+import http.client
 
 
 def esc(v) -> str:
@@ -36,6 +36,7 @@ import sys
 sys.path.insert(0, os.path.join(SAAS_DIR, "core"))
 from tenant_db import get_all_tenants, tenant_sales_db  # noqa: E402
 import tickets  # noqa: E402  (module partagé : vendeurs + attribution)
+import dbconn   # noqa: E402  (connexions SQLite réglées pour la charge)
 import access_log  # noqa: E402  (journal d'accès routeur + détection de partage)
 
 app = Flask(__name__)
@@ -117,11 +118,8 @@ def _db_lock(slug: str) -> threading.Lock:
 
 def _sales_conn(slug: str) -> sqlite3.Connection:
     path = tenant_sales_db(slug)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    conn = sqlite3.connect(path, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=10000")
+    conn = dbconn.connect(path)
+    dbconn.keep_open(path)
     return conn
 
 
@@ -272,18 +270,75 @@ def get_week_stats(slug: str):
 # TELEGRAM
 # ═══════════════════════════════════════════════
 
+# Une connexion HTTPS PERSISTANTE par thread (keep-alive) : chaque bot
+# interroge Telegram toutes les 30 s ; rouvrir une connexion chiffrée à
+# chaque appel coûtait une négociation TLS complète, soit l'essentiel du
+# processeur consommé au repos quand les clients sont nombreux.
+_tg_local = threading.local()
+
+
+def _tg_conn(timeout: float) -> http.client.HTTPSConnection:
+    conn = getattr(_tg_local, "conn", None)
+    if conn is None:
+        conn = http.client.HTTPSConnection("api.telegram.org", timeout=timeout)
+        _tg_local.conn = conn
+    conn.timeout = timeout
+    if conn.sock is not None:
+        conn.sock.settimeout(timeout)
+    return conn
+
+
+def _tg_drop():
+    conn = getattr(_tg_local, "conn", None)
+    if conn is not None:
+        conn.close()
+    _tg_local.conn = None
+
+
 def _tg(bot_token, method, payload, timeout=10):
     if not bot_token:
         return {}
-    try:
-        url  = f"https://api.telegram.org/bot{bot_token}/{method}"
-        data = json.dumps(payload).encode()
-        req  = urllib.request.Request(url, data=data,
-               headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read())
-    except Exception:
-        return {}
+    body = json.dumps(payload).encode()
+    quiet = method == "getUpdates"   # long-polling : pas de bruit dans les logs
+    for attempt in (1, 2):
+        conn = _tg_conn(timeout)
+        try:
+            conn.request("POST", f"/bot{bot_token}/{method}", body=body,
+                         headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            raw  = resp.read()
+        except TimeoutError:
+            # Pas de nouvel essai : la requête a pu être traitée (doublon).
+            _tg_drop()
+            if not quiet:
+                print(f"[TG] {method} échec : délai dépassé", flush=True)
+            return {}
+        except (http.client.HTTPException, ConnectionError) as e:
+            # Connexion keep-alive fermée côté Telegram : on rouvre une fois.
+            _tg_drop()
+            if attempt == 1:
+                continue
+            if not quiet:
+                print(f"[TG] {method} échec : {type(e).__name__}", flush=True)
+            return {}
+        except OSError as e:
+            _tg_drop()
+            if not quiet:
+                print(f"[TG] {method} échec : {type(e).__name__}", flush=True)
+            return {}
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            data = {}
+        if resp.status >= 400:
+            # Telegram refuse (message trop long, chat introuvable, bouton
+            # invalide…) : on journalise la raison au lieu d'échouer en silence.
+            if not quiet:
+                print(f"[TG] {method} refusé ({resp.status}) : "
+                      f"{data.get('description', '')}", flush=True)
+            return {}
+        return data
+    return {}
 
 
 def send_msg(bot_token, chat_id, text, markup=None):
@@ -321,21 +376,62 @@ def kb_persistent():
 
 
 # ── Claviers inline (drill-down vendeur → période) ───────────
+# Telegram limite callback_data à 64 octets : on n'y met donc JAMAIS le nom
+# du vendeur (un nom long faisait échouer tout le message), mais une clé
+# courte dérivée du nom, retrouvée ensuite dans la liste des vendeurs.
+# Le séparateur « : » évite aussi l'ambiguïté des noms contenant « _ ».
+
+PERIODS = ("today", "week", "month", "year")
+
+
+def seller_key(seller: str) -> str:
+    return hashlib.sha1(seller.encode("utf-8")).hexdigest()[:12]
+
+
+def find_seller(slug: str, key: str) -> str | None:
+    for s in get_all_sellers(slug):
+        if seller_key(s) == key:
+            return s
+    return None
+
 
 def kb_sellers(sellers):
-    rows = [[{"text": f"👤 {s}", "callback_data": f"seller_{s}"}] for s in sellers]
+    rows = [[{"text": f"👤 {s}", "callback_data": f"s:{seller_key(s)}"}] for s in sellers]
     rows.append([{"text": "🔙 Menu principal", "callback_data": "menu_main"}])
     return {"inline_keyboard": rows}
 
 
 def kb_periods(seller):
+    k = seller_key(seller)
     return {"inline_keyboard": [
-        [{"text": "📅 Aujourd'hui", "callback_data": f"stat_{seller}_today"},
-         {"text": "📆 Semaine",     "callback_data": f"stat_{seller}_week"}],
-        [{"text": "🗓 Mois",        "callback_data": f"stat_{seller}_month"},
-         {"text": "📊 Année",       "callback_data": f"stat_{seller}_year"}],
+        [{"text": "📅 Aujourd'hui", "callback_data": f"p:{k}:today"},
+         {"text": "📆 Semaine",     "callback_data": f"p:{k}:week"}],
+        [{"text": "🗓 Mois",        "callback_data": f"p:{k}:month"},
+         {"text": "📊 Année",       "callback_data": f"p:{k}:year"}],
         [{"text": "🔙 Retour vendeurs", "callback_data": "menu_sellers"}],
     ]}
+
+
+def parse_callback(slug: str, data: str):
+    """Décode un callback vendeur. Retourne (action, vendeur, période) avec
+    action 'seller' | 'stat', ou None si inconnu. Accepte aussi l'ancien
+    format (seller_<nom> / stat_<nom>_<période>) des messages déjà envoyés."""
+    if data.startswith("s:"):
+        seller = find_seller(slug, data[2:])
+        return ("seller", seller, None) if seller else None
+    if data.startswith("p:"):
+        parts = data.split(":")
+        if len(parts) == 3 and parts[2] in PERIODS:
+            seller = find_seller(slug, parts[1])
+            return ("stat", seller, parts[2]) if seller else None
+        return None
+    if data.startswith("seller_"):
+        return ("seller", data[7:], None)
+    if data.startswith("stat_"):
+        seller, _, period = data[5:].rpartition("_")
+        if seller and period in PERIODS:
+            return ("stat", seller, period)
+    return None
 
 
 # ── Messages ─────────────────────────────────────────────────
@@ -451,12 +547,27 @@ class BotWorker(threading.Thread):
             except Exception:
                 self.stop_flag.wait(5)
 
+    def _authorized(self, chat_id: str, user_id: str) -> bool:
+        """Seul le propriétaire du tenant peut consulter ses chiffres : la
+        conversation (privée ou groupe) doit être le chat_id configuré, ou
+        l'expéditeur doit en être l'identifiant. Sans chat_id configuré,
+        personne n'a accès."""
+        tenant = registry.get(self.slug) if registry else None
+        owner  = str((tenant or {}).get("chat_id") or "").strip()
+        return bool(owner) and owner in (chat_id, user_id)
+
     def handle_update(self, update):
         slug = self.slug
         if "message" in update:
             msg     = update["message"]
             chat_id = str(msg["chat"]["id"])
+            user_id = str((msg.get("from") or {}).get("id", ""))
             text    = msg.get("text", "").strip()
+            if not self._authorized(chat_id, user_id):
+                send_msg(self.bot_token, chat_id,
+                         "🔒 <b>Bot privé</b>\n\nCe bot est réservé à son propriétaire.\n"
+                         f"Votre identifiant Telegram : <code>{esc(chat_id)}</code>")
+                return
             # Boutons du volet fixe (arrivent comme des messages texte)
             if text == BTN_GLOBAL or text.startswith("/stats"):
                 send_msg(self.bot_token, chat_id, msg_global(slug))
@@ -474,23 +585,30 @@ class BotWorker(threading.Thread):
             chat_id = str(cb["message"]["chat"]["id"])
             msg_id  = cb["message"]["message_id"]
             data    = cb.get("data", "")
+            user_id = str((cb.get("from") or {}).get("id", ""))
+            if not self._authorized(chat_id, user_id):
+                _tg(self.bot_token, "answerCallbackQuery",
+                    {"callback_query_id": cb["id"], "text": "Accès refusé"})
+                return
             _tg(self.bot_token, "answerCallbackQuery", {"callback_query_id": cb["id"]})
 
             if data == "menu_main":
                 edit_msg(self.bot_token, chat_id, msg_id, msg_welcome())
-            elif data == "menu_sellers":
+                return
+            if data == "menu_sellers":
                 sellers = get_all_sellers(slug)
                 edit_msg(self.bot_token, chat_id, msg_id, msg_sellers(sellers), markup=kb_sellers(sellers))
-            elif data.startswith("seller_"):
-                seller = data[7:]
+                return
+            parsed = parse_callback(slug, data)
+            if not parsed:
+                return
+            action, seller, period = parsed
+            if action == "seller":
                 edit_msg(self.bot_token, chat_id, msg_id,
                          f"👤 <b>{esc(seller)}</b>\n\nChoisissez la période :", markup=kb_periods(seller))
-            elif data.startswith("stat_"):
-                parts = data.split("_", 2)
-                if len(parts) == 3:
-                    _, seller, period = parts
-                    edit_msg(self.bot_token, chat_id, msg_id,
-                             msg_stats(slug, seller, period), markup=kb_periods(seller))
+            else:
+                edit_msg(self.bot_token, chat_id, msg_id,
+                         msg_stats(slug, seller, period), markup=kb_periods(seller))
 
 
 class BotManager:
@@ -532,23 +650,33 @@ bot_manager = BotManager()
 
 
 # ═══════════════════════════════════════════════
-# RATE LIMITING PAR SLUG (protection flood /t/<slug>/login)
+# RATE LIMITING (protection flood /t/<slug>/login)
 # ═══════════════════════════════════════════════
+# Deux compteurs distincts, appliqués APRÈS la vérification du jeton :
+#   - « slug:<slug> » : requêtes AUTHENTIFIÉES d'un tenant ;
+#   - « bad:<ip> »    : requêtes à jeton invalide, par IP source.
+# Ainsi un tiers qui connaît le slug mais pas le jeton ne peut plus épuiser
+# le quota du tenant et faire ignorer ses vraies ventes.
 
-RATE_MAX    = 120   # requêtes max…
-RATE_WINDOW = 60    # …par fenêtre de 60 s et par slug
+RATE_MAX      = 120   # requêtes max…
+RATE_WINDOW   = 60    # …par fenêtre de 60 s et par clé
+RATE_BAD_MAX  = 30    # requêtes à jeton invalide max par IP et par fenêtre
+RATE_MAX_KEYS = 5000  # au-delà, purge des clés inactives (mémoire bornée)
 
 _rate: dict[str, list[float]] = {}
 _rate_lock = threading.Lock()
 
 
-def slug_rate_limited(slug: str) -> bool:
+def rate_limited(key: str, max_hits: int = RATE_MAX) -> bool:
     now = time.time()
     with _rate_lock:
-        stamps = [t for t in _rate.get(slug, []) if now - t < RATE_WINDOW]
+        if len(_rate) > RATE_MAX_KEYS:
+            for k in [k for k, v in _rate.items() if not v or now - v[-1] >= RATE_WINDOW]:
+                del _rate[k]
+        stamps = [t for t in _rate.get(key, []) if now - t < RATE_WINDOW]
         stamps.append(now)
-        _rate[slug] = stamps
-        return len(stamps) > RATE_MAX
+        _rate[key] = stamps
+        return len(stamps) > max_hits
 
 
 def _hub_key_ok() -> bool:
@@ -640,14 +768,12 @@ def tenant_login(slug):
     if err:
         return err
 
-    if slug_rate_limited(slug):
-        print(f"[SECURITY] {slug}: rate limit dépassé — requête ignorée", flush=True)
-        return jsonify({"status": "ok"})
-
     data      = request.form if request.method == "POST" else request.args
     username  = data.get("username", "").strip()
     profile   = data.get("profile", "").strip()
-    token     = data.get("token", "").strip()
+    # Jeton : en-tête X-Router-Token (scripts actuels, jamais journalisé),
+    # sinon paramètre « token » (anciens scripts encore en service).
+    token     = (request.headers.get("X-Router-Token") or data.get("token", "")).strip()
     identity  = data.get("router", "").strip()
     serial    = data.get("serial", "").strip()
     client_ip = request.headers.get("X-Real-IP") or request.remote_addr or ""
@@ -663,23 +789,32 @@ def tenant_login(slug):
     if not username:
         return jsonify({"error": "username requis"}), 400
 
-    # Token obligatoire dès qu'il est configuré (toujours le cas pour
-    # les tenants créés depuis la v2). Comparaison a temps constant pour ne
-    # pas exposer le token via une attaque temporelle. Un tenant SANS token
-    # (config legacy) est accepté mais journalise une alerte : à corriger.
+    # Token OBLIGATOIRE. Comparaison a temps constant pour ne pas exposer le
+    # token via une attaque temporelle. Un tenant SANS token (config legacy
+    # antérieure à la v2) est désormais refusé : n'importe qui connaissant
+    # son slug pouvait sinon lui injecter de fausses ventes.
     router_token = tenant.get("router_token") or ""
     if router_token:
         token_ok = bool(token) and secrets.compare_digest(token, router_token)
     else:
-        token_ok = True
-        print(f"[SECURITY] {slug}: aucun router_token configuré — vente acceptée "
-              f"sans authentification. Régénérez le script pour ce tenant.", flush=True)
-
-    # Journal d'accès : IP publique + empreinte appareil (détection de partage).
-    access_log.record(slug, client_ip, identity, token_ok, device_id=device_id)
+        token_ok = False
+        print(f"[SECURITY] {slug}: aucun router_token configuré — vente REFUSÉE. "
+              f"Régénérez le script de ce tenant depuis la plateforme.", flush=True)
 
     if not token_ok:
+        # Flood à jeton invalide : limité par IP, sans toucher au quota du
+        # tenant. Au-delà du seuil on ne journalise même plus (disque/logs).
+        if rate_limited(f"bad:{client_ip}", RATE_BAD_MAX):
+            return jsonify({"status": "ok"})
+        access_log.record(slug, client_ip, identity, False, device_id=device_id)
         print(f"[SECURITY] {slug}: token invalide depuis {client_ip} — ignoré", flush=True)
+        return jsonify({"status": "ok"})
+
+    # Journal d'accès : IP publique + empreinte appareil (détection de partage).
+    access_log.record(slug, client_ip, identity, True, device_id=device_id)
+
+    if rate_limited(f"slug:{slug}"):
+        print(f"[SECURITY] {slug}: rate limit dépassé — vente ignorée ({username})", flush=True)
         return jsonify({"status": "ok"})
 
     router_display = identity or tenant.get("router_name") or ""

@@ -4,8 +4,6 @@ test_wireguard.py — Génération des clés, adressage et bloc client WireGuard
 """
 import base64
 
-import pytest
-
 import wireguard as wg
 
 

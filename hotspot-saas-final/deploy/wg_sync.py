@@ -26,6 +26,55 @@ def _wg(*args) -> str:
                           timeout=30).stdout.strip()
 
 
+# ── Filtrage du trafic entre pairs (iptables) ─────────────────────
+# Le serveur relaie le trafic entre pairs du tunnel (appareil VPN de
+# l'opérateur -> son routeur). Sans filtre, n'importe quel pair pouvait
+# joindre n'importe quel autre (routeurs et appareils d'autres clients).
+# Chaîne dédiée : autorise uniquement chaque appareil VPN <-> le routeur de
+# SON tenant, et rejette le reste. Recalculée à chaque passage (idempotent).
+FWD_CHAIN = "HOTSPOTPRO-WG"
+
+
+def _ipt(*args) -> subprocess.CompletedProcess:
+    return subprocess.run(["iptables", *args], capture_output=True, text=True,
+                          timeout=30)
+
+
+def forward_rules(router_ip_by_slug: dict, admin_peers: list) -> list[list[str]]:
+    """Règles de la chaîne : paires autorisées puis DROP final."""
+    rules = []
+    for p in sorted(admin_peers, key=lambda x: x["tunnel_ip"]):
+        rip = router_ip_by_slug.get(p["slug"])
+        if not rip:
+            continue
+        op = p["tunnel_ip"]
+        rules.append(["-s", f"{op}/32", "-d", f"{rip}/32", "-j", "ACCEPT"])
+        rules.append(["-s", f"{rip}/32", "-d", f"{op}/32", "-j", "ACCEPT"])
+    rules.append(["-j", "DROP"])
+    return rules
+
+
+def sync_forward(rules: list[list[str]], run=_ipt) -> bool:
+    """Applique `rules` dans la chaîne dédiée. Retourne True si modifiée."""
+    if run("-n", "-L", FWD_CHAIN).returncode != 0:
+        run("-N", FWD_CHAIN)
+    # Ancienne règle d'installation : tout accepter entre pairs -> retirée.
+    while run("-C", "FORWARD", "-i", IFACE, "-o", IFACE, "-j", "ACCEPT").returncode == 0:
+        run("-D", "FORWARD", "-i", IFACE, "-o", IFACE, "-j", "ACCEPT")
+    if run("-C", "FORWARD", "-i", IFACE, "-o", IFACE, "-j", FWD_CHAIN).returncode != 0:
+        run("-I", "FORWARD", "1", "-i", IFACE, "-o", IFACE, "-j", FWD_CHAIN)
+
+    want = [f"-A {FWD_CHAIN} " + " ".join(r) for r in rules]
+    have = [line for line in run("-S", FWD_CHAIN).stdout.splitlines()
+            if line.startswith(f"-A {FWD_CHAIN} ")]
+    if have == want:
+        return False
+    run("-F", FWD_CHAIN)
+    for r in rules:
+        run("-A", FWD_CHAIN, *r)
+    return True
+
+
 def current_peers() -> set[str]:
     """Clés publiques actuellement configurées sur l'interface."""
     out = _wg("show", IFACE, "peers")
@@ -105,11 +154,21 @@ def main() -> int:
     # Pairs opérateur (VPN d'accès au routeur) : appliqués aussi sur
     # l'interface, mais PAS journalisés (leur IP publique diffère de celle du
     # routeur -> ne doit pas déclencher de fausse alerte de partage).
+    admin_peers = []
     try:
-        for p in wg_store.all_admin_peers_public():
+        admin_peers = wg_store.all_admin_peers_public()
+        for p in admin_peers:
             desired[p["public_key"]] = p["tunnel_ip"]
     except Exception as e:
         print(f"[wg-sync] pairs opérateur ignorés : {e}", flush=True)
+
+    # Filtrage entre pairs : chaque appareil VPN ne joint que son routeur.
+    try:
+        router_ip_by_slug = {p["slug"]: p["tunnel_ip"] for p in peers}
+        if sync_forward(forward_rules(router_ip_by_slug, admin_peers)):
+            print("[wg-sync] règles de filtrage entre pairs mises à jour", flush=True)
+    except Exception as e:
+        print(f"[wg-sync] filtrage entre pairs non appliqué : {e}", flush=True)
 
     try:
         existing = current_peers()

@@ -74,9 +74,10 @@ cat > "$WG_CONF" << CONFEOF
 Address = $SERVER_TUNNEL_IP
 ListenPort = $WG_PORT
 PrivateKey = $SRV_PRIV
-# Forwarding entre pairs du tunnel (VPN opérateur -> son routeur)
-PostUp = sysctl -w net.ipv4.ip_forward=1; iptables -C FORWARD -i $IFACE -o $IFACE -j ACCEPT 2>/dev/null || iptables -I FORWARD -i $IFACE -o $IFACE -j ACCEPT
-PostDown = iptables -D FORWARD -i $IFACE -o $IFACE -j ACCEPT 2>/dev/null || true
+# Forwarding entre pairs du tunnel, FILTRÉ : la chaîne HOTSPOTPRO-WG (remplie
+# par hotspotpro-wg-sync) n'autorise que chaque appareil VPN <-> son routeur.
+PostUp = sysctl -w net.ipv4.ip_forward=1; iptables -N HOTSPOTPRO-WG 2>/dev/null || true; iptables -C FORWARD -i $IFACE -o $IFACE -j HOTSPOTPRO-WG 2>/dev/null || iptables -I FORWARD 1 -i $IFACE -o $IFACE -j HOTSPOTPRO-WG
+PostDown = iptables -D FORWARD -i $IFACE -o $IFACE -j HOTSPOTPRO-WG 2>/dev/null || true
 # Les pairs (routeurs clients) sont gérés par hotspotpro-wg-sync
 CONFEOF
 chmod 600 "$WG_CONF"

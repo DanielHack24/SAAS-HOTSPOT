@@ -107,6 +107,14 @@ FIELDS = [
     {"key": "watchdog_disk_alert", "label": "Seuil d'alerte disque (%)", "group": "ops",
      "type": "number", "secret": False, "env_attr": "WATCHDOG_DISK_ALERT",
      "help": "Alerte Telegram quand le disque dépasse ce pourcentage."},
+    {"key": "watchdog_cpu_alert", "label": "Seuil d'alerte processeur (%)", "group": "ops",
+     "type": "number", "secret": False, "env_attr": "WATCHDOG_CPU_ALERT",
+     "help": "Alerte Telegram quand le processeur reste occupé au-delà de ce "
+             "pourcentage pendant environ 6 minutes."},
+    {"key": "watchdog_steal_alert", "label": "Seuil d'alerte processeur bridé (%)", "group": "ops",
+     "type": "number", "secret": False, "env_attr": "WATCHDOG_STEAL_ALERT",
+     "help": "Part du processeur retenue par l'hébergeur (crédits CPU AWS "
+             "épuisés). Au-delà, alerte : le serveur est bridé."},
     {"key": "watchdog_auto_restart", "label": "Redémarrage auto des services", "group": "ops",
      "type": "bool", "secret": False, "env_attr": "WATCHDOG_AUTO_RESTART",
      "help": "Le watchdog tente de relancer un service tombé avant d'alerter."},

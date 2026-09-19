@@ -94,6 +94,8 @@ ADMIN_BOT_TOKEN       = os.environ.get("ADMIN_BOT_TOKEN", "").strip()
 ADMIN_CHAT_ID         = os.environ.get("ADMIN_CHAT_ID", "").strip()
 WATCHDOG_DISK_ALERT   = os.environ.get("WATCHDOG_DISK_ALERT", "90").strip()
 WATCHDOG_AUTO_RESTART = os.environ.get("WATCHDOG_AUTO_RESTART", "1").strip()
+WATCHDOG_CPU_ALERT    = os.environ.get("WATCHDOG_CPU_ALERT", "85").strip()
+WATCHDOG_STEAL_ALERT  = os.environ.get("WATCHDOG_STEAL_ALERT", "30").strip()
 
 # Sauvegardes : rétention locale + copie distante authentifiée (SMB/SFTP/rclone)
 BACKUP_KEEP_DAYS      = os.environ.get("BACKUP_KEEP_DAYS", "14").strip()

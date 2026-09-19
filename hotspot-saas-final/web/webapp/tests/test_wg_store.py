@@ -1,7 +1,6 @@
 """
 test_wg_store.py — Stockage chiffré des pairs WireGuard (saas/core).
 """
-import os
 import sqlite3
 
 import pytest

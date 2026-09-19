@@ -129,7 +129,7 @@ def webhook_fedapay():
     signature = request.headers.get("X-FEDAPAY-SIGNATURE", "")
 
     if not fedapay.verify_webhook_signature(payload, signature):
-        print(f"[WEBHOOK] Signature invalide — rejeté", flush=True)
+        print("[WEBHOOK] Signature invalide — rejeté", flush=True)
         return jsonify({"error": "signature invalide"}), 403
 
     try:

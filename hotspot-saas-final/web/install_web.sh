@@ -201,7 +201,9 @@ Group=$APP_USER
 WorkingDirectory=$WEB_DIR/webapp
 EnvironmentFile=$WEB_DIR/.env
 Environment=PYTHONPATH=$SAAS_DIR/core
-ExecStart=$VENV/bin/gunicorn -w 2 --timeout 120 -b 127.0.0.1:5000 app:app
+ExecStart=$VENV/bin/gunicorn -w 2 --threads 8 --timeout 120 -b 127.0.0.1:5000 app:app
+# Bases SQLite gardées ouvertes (dbconn.keep_open) : marge de descripteurs
+LimitNOFILE=65536
 Restart=always
 RestartSec=5
 StandardOutput=journal

@@ -10,6 +10,10 @@ dans um_sync.py pour rester facile à ajuster selon la config du routeur.
 """
 import requests
 
+# Droits des scripts temporaires exécutés sur le routeur (tickets, règles
+# VPN) : sous-ensemble strict du groupe du compte plateforme (wireguard.py).
+SCRIPT_POLICY = "read,write,test"
+
 
 class RouterUnreachable(Exception):
     """Le routeur ne répond pas (tunnel down, routeur éteint)."""
@@ -82,7 +86,11 @@ class RouterOSRest:
         for sc in self.get("/system/script"):
             if sc.get("name") == name:
                 self.delete("/system/script/" + sc[".id"])
-        self.create("/system/script", {"name": name, "source": source})
+        # Politique explicite, limitée aux droits du compte plateforme : sans
+        # elle, RouterOS attribue au script des droits plus larges que ceux
+        # du compte, et son exécution serait refusée.
+        self.create("/system/script", {"name": name, "source": source,
+                                       "policy": SCRIPT_POLICY})
         try:
             self._req("POST", "/system/script/run", {"number": name})
         finally:
