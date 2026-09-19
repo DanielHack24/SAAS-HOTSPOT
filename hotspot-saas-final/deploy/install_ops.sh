@@ -157,6 +157,16 @@ install -m 755 "$SCRIPT_DIR/watchdog.py" /usr/local/bin/hotspotpro-watchdog.py
 WD_PY="$WEB_DIR/venv/bin/python3"
 [ -x "$WD_PY" ] || WD_PY="/usr/bin/python3"
 
+# Journaux systeme : 30 jours au maximum (duree annoncee dans la politique
+# de confidentialite ; ils contiennent des adresses IP).
+mkdir -p /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/hotspotpro.conf << JRNEOF
+[Journal]
+MaxRetentionSec=30day
+JRNEOF
+systemctl restart systemd-journald > /dev/null 2>&1 || true
+ok "Journaux systeme conserves 30 jours au maximum"
+
 cat > /etc/systemd/system/hotspotpro-watchdog.service << SVCEOF
 [Unit]
 Description=HotspotPro watchdog (supervision web + hub + disque)

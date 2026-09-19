@@ -17,7 +17,8 @@ def _csrf(client):
 def _form(**kw):
     base = {"csrf_token": "tok", "full_name": "Jean Test",
             "email": "jean@test.tg", "phone": "90000000",
-            "password": "motdepasse1", "password2": "motdepasse1", "plan": "3m"}
+            "password": "motdepasse1", "password2": "motdepasse1", "plan": "3m",
+            "accept_terms": "1"}
     base.update(kw)
     return base
 

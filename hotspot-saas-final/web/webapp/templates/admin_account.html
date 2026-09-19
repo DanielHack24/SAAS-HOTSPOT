@@ -31,12 +31,14 @@
       {{ csrf_field() }}
       <input type="hidden" name="action" value="update_profile">
       <div class="form-group">
-        <label class="form-label">Nom complet</label>
-        <input class="form-input" type="text" name="full_name" value="{{ admin.full_name }}" required>
+        <label class="form-label" for="admin_full_name">Nom complet</label>
+        <input class="form-input" id="admin_full_name" type="text" name="full_name"
+               value="{{ admin.full_name }}" autocomplete="name" required>
       </div>
       <div class="form-group">
         <label class="form-label">Email <span style="color:var(--muted);font-weight:400">(non modifiable)</span></label>
-        <input class="form-input" type="email" value="{{ admin.email }}" disabled>
+        <input class="form-input" id="admin_email_ro" type="email" value="{{ admin.email }}"
+               aria-label="Adresse e-mail (non modifiable)" disabled>
       </div>
       <div class="form-group">
         <label class="form-label">Couleur de l'icône</label>

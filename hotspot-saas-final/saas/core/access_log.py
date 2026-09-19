@@ -182,3 +182,15 @@ def prune(days: int = 120) -> int:
     c.commit()
     c.close()
     return n
+
+
+def forget_slug(slug: str) -> int:
+    """Efface tout le journal d'un tenant (suppression de compte client).
+    Retourne le nombre de lignes supprimées."""
+    ensure_schema()
+    c = _conn()
+    cur = c.execute("DELETE FROM router_access WHERE slug=?", (slug,))
+    n = cur.rowcount
+    c.commit()
+    c.close()
+    return n

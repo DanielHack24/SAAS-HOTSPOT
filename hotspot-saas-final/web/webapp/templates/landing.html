@@ -9,11 +9,9 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="HotspotPro — Comptabilité automatique pour hotspots MikroTik">
 <meta property="og:description" content="Bot Telegram, stats en temps réel, script MikroTik automatique. Opérationnel en moins de 5 minutes. Paiement sécurisé via FedaPay.">
-<meta property="og:url" content="https://hotspotpro.tg">
+<meta property="og:url" content="{{ request.url_root }}">
 <meta property="og:site_name" content="HotspotPro">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
 {% if has_router_3d %}
 <script type="module" src="{{ url_for('static', filename='js/model-viewer.min.js') }}"></script>
 {% endif %}
@@ -201,7 +199,7 @@ nav{
 }
 .si:last-child{border-right:none}
 .si-n{font-family:var(--fh);font-size:1.9rem;font-weight:700;color:#fff;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
-.si-l{font-size:.72rem;color:rgba(255,255,255,.45);margin-top:.45rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.si-l{font-size:.72rem;color:rgba(255,255,255,.72);margin-top:.45rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
 
 /* ── SECTIONS ── */
 .sec{padding:5.5rem 5%}
@@ -382,16 +380,16 @@ footer{background:var(--panel);color:rgba(255,255,255,.55)}
   border-bottom:1px solid rgba(255,255,255,.07);
 }
 .footer-brand .logo{color:#fff;margin-bottom:.2rem;text-decoration:none}
-.footer-brand p{font-size:.83rem;color:rgba(255,255,255,.4);line-height:1.7;margin-top:.85rem;max-width:30ch}
-.footer-col h4{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:rgba(255,255,255,.3);margin-bottom:1rem}
+.footer-brand p{font-size:.83rem;color:rgba(255,255,255,.72);line-height:1.7;margin-top:.85rem;max-width:30ch}
+.footer-col h4{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:rgba(255,255,255,.72);margin-bottom:1rem}
 .footer-col a{display:block;font-size:.83rem;color:rgba(255,255,255,.5);text-decoration:none;margin-bottom:.55rem;transition:color .15s}
 .footer-col a:hover{color:#fff}
 .footer-bottom{padding:1.4rem 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem}
-.footer-bottom p{font-size:.76rem;color:rgba(255,255,255,.3)}
+.footer-bottom p{font-size:.76rem;color:rgba(255,255,255,.72)}
 .footer-legal{display:flex;gap:1.4rem}
-.footer-legal a{font-size:.76rem;color:rgba(255,255,255,.3);text-decoration:none;transition:color .15s}
+.footer-legal a{font-size:.76rem;color:rgba(255,255,255,.72);text-decoration:none;transition:color .15s}
 .footer-legal a:hover{color:rgba(255,255,255,.7)}
-.footer-made{font-size:.73rem;color:rgba(255,255,255,.22)}
+.footer-made{font-size:.73rem;color:rgba(255,255,255,.62)}
 .footer-made span{color:#E8874C}
 
 /* ── FLASH ── */
@@ -483,18 +481,9 @@ footer{background:var(--panel);color:rgba(255,255,255,.55)}
     </div>
 
     <div class="hero-proof fade-up d5">
-      <div class="proof-avatars">
-        <span style="background:#C2410C">K</span>
-        <span style="background:#1D4ED8">Y</span>
-        <span style="background:#15803D">A</span>
-        <span style="background:#7C3AED">D</span>
-        <span style="background:#12263A">+</span>
-      </div>
       <div>
-        <div class="proof-stars">
-          {% for i in range(5) %}<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{% endfor %}
-        </div>
-        <div class="proof-text"><strong>500+ opérateurs actifs</strong> : déploiement en moins de 5 minutes, avec ou sans carte bancaire</div>
+        <div class="proof-text">Paiement par Mobile Money ou carte, sans
+        engagement : aucun renouvellement automatique.</div>
       </div>
     </div>
   </div>
@@ -584,7 +573,7 @@ footer{background:var(--panel);color:rgba(255,255,255,.55)}
     <div class="fc reveal">
       <div class="fi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <h3>Attribution par vendeur</h3>
-      <p>Un préfixe sur chaque ticket (daniel-xxxx) et chaque vente est attribuée automatiquement.</p>
+      <p>Chaque ticket est rattaché à son vendeur : la vente lui est attribuée automatiquement, sans saisie.</p>
     </div>
     <div class="fc reveal">
       <div class="fi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
@@ -655,43 +644,9 @@ footer{background:var(--panel);color:rgba(255,255,255,.55)}
   </div>
 </section>
 
-<!-- ── TÉMOIGNAGES (marquee) ── -->
-{% set testimonials = [
-  ("Avant, je comptais mes ventes à la main. Maintenant mon Telegram me dit tout en temps réel. J'ai gagné deux heures par jour.", "Koami A.", "Opérateur hotspot — Lomé", "#C2410C", 5),
-  ("Le script MikroTik était prêt en cinq minutes. J'ai juste copié-collé et ça fonctionnait. Les stats arrivent automatiquement.", "Yao M.", "Gérant cybercafé — Tsévié", "#1D4ED8", 5),
-  ("J'avais peur que ce soit compliqué. Le support m'a aidé et tout était opérationnel le soir même.", "Akossiwa D.", "Revendeuse tickets — Kpalimé", "#15803D", 5),
-  ("Le paiement par Mobile Money est vraiment pratique. Pas besoin de carte bancaire. Confirmation en moins d'une heure.", "Biossey K.", "Opérateur hotspot — Sokodé", "#7C3AED", 4),
-  ("Je surveille mes ventes depuis mon téléphone, même quand je ne suis pas sur place. C'est exactement ce qu'il me fallait.", "Edem T.", "Multi-sites hotspot — Atakpamé", "#0E7490", 5),
-  ("J'ai recommandé HotspotPro à quatre collègues. Le rapport qualité-prix est imbattable comparé aux autres solutions.", "Sena A.", "Opérateur hotspot — Lomé, Bè", "#B45309", 5),
-  ("Telegram me montre qui a vendu quoi, quand et combien. Fini les disputes avec mes vendeurs à la fin du mois.", "Dodzi K.", "Gérant multi-vendeurs — Agbodrafo", "#12263A", 5),
-  ("Installation en dix minutes chrono. Je pensais que ça prendrait des heures. Franchement convaincant.", "Mawuli H.", "Cybercafé — Aného", "#BE185D", 5)
-] %}
-<section class="testi-sec" id="temoignages">
-  <div class="sec-label">Témoignages</div>
-  <h2 class="how-h2">Ils font confiance à HotspotPro</h2>
-  <div class="testi-marquee">
-    <div class="testi-track">
-      {% for dup in range(2) %}
-      <div style="display:flex;gap:1rem" {% if dup == 1 %}aria-hidden="true"{% endif %}>
-        {% for quote, name, role, color, stars in testimonials %}
-        <div class="testi-card">
-          <div class="testi-stars" aria-label="{{ stars }} étoiles sur 5">
-            {% for i in range(5) %}
-            <svg class="{% if i >= stars %}off{% endif %}" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            {% endfor %}
-          </div>
-          <p class="testi-quote">«&nbsp;{{ quote }}&nbsp;»</p>
-          <div class="testi-by">
-            <div class="testi-av" style="background:{{ color }}">{{ name[0] }}</div>
-            <div><div class="testi-name">{{ name }}</div><div class="testi-role">{{ role }}</div></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+<!-- Section témoignages retirée : les avis affichés n'étaient pas des
+     avis réels de clients (voir l'historique Git pour les restaurer
+     s'ils proviennent de clients ayant consenti à être cités). -->
 
 <!-- ── CTA FINAL ── -->
 <section class="cta-final">
@@ -743,9 +698,12 @@ footer{background:var(--panel);color:rgba(255,255,255,.55)}
   <div class="footer-bottom">
     <p>© 2026 HotspotPro</p>
     <div class="footer-legal">
-      <a href="{{ url_for('legal_page', slug='conditions') }}">CGU</a>
+      <a href="{{ url_for('legal_page', slug='conditions') }}">Conditions</a>
       <a href="{{ url_for('legal_page', slug='confidentialite') }}">Confidentialité</a>
-      <a href="mailto:support@hotpotpro.app">Contact</a>
+      <a href="{{ url_for('legal_page', slug='cookies') }}">Cookies</a>
+      <a href="{{ url_for('legal_page', slug='remboursement') }}">Remboursement</a>
+      <a href="{{ url_for('legal_page', slug='mentions-legales') }}">Mentions légales</a>
+      <a href="mailto:{{ contact_email }}">Contact</a>
     </div>
     <p class="footer-made">Conçu pour les opérateurs <span>MikroTik</span></p>
   </div>

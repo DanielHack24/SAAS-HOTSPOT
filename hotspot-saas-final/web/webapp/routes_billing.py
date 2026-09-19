@@ -5,6 +5,8 @@ from flask import (render_template, request, redirect, url_for,
                    session, flash, jsonify)
 
 import config
+from datetime import datetime
+from legal_content import TERMS_VERSION
 import fedapay
 import services
 from webapp_core import app
@@ -34,6 +36,12 @@ def subscribe_checkout():
         flash("Plan invalide.", "error")
         return redirect(url_for("subscribe"))
     p = config.PLANS[plan]
+    # Acceptation des conditions + demande expresse de démarrage immédiat
+    # (loi n° 2017-07, art. 47 ; voir la politique de remboursement).
+    if request.form.get("accept_terms") != "1":
+        flash("Cochez la case d'acceptation des conditions et de démarrage immédiat du service pour continuer.", "error")
+        return redirect(url_for("subscribe", plan=plan))
+    consent_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         trans_id, payment_url = fedapay.create_transaction(
@@ -47,9 +55,10 @@ def subscribe_checkout():
         )
         conn = get_db()
         conn.execute("""
-            INSERT INTO payments (client_id, plan, amount, method, reference, status)
-            VALUES (?, ?, ?, 'fedapay', ?, 'pending')
-        """, (client["id"], plan, p["price"], trans_id))
+            INSERT INTO payments (client_id, plan, amount, method, reference, status,
+                                  terms_version, immediate_consent_at)
+            VALUES (?, ?, ?, 'fedapay', ?, 'pending', ?, ?)
+        """, (client["id"], plan, p["price"], trans_id, TERMS_VERSION, consent_at))
         conn.commit()
         conn.close()
         return redirect(payment_url)

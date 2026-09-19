@@ -4,9 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Connexion — HotspotPro</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23122639'/><path d='M8 16.5a10 10 0 0 1 16 0' stroke='%23E8630A' stroke-width='2.2' stroke-linecap='round' fill='none'/><path d='M11 19.5a6 6 0 0 1 10 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><circle cx='16' cy='23' r='1.5' fill='white'/></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
 <style>
 :root{
   --bg:#F4F5F7;--surface:#fff;--ink:#131720;--muted:#5B6472;--border:#E3E6EA;
@@ -33,7 +31,7 @@ body{font-family:var(--fb);min-height:100vh;display:grid;grid-template-columns:5
 .perks svg{color:#E8874C;flex-shrink:0}
 .left-foot{display:flex;gap:2rem;padding-top:1.4rem;border-top:1px solid rgba(255,255,255,.08)}
 .lf-val{font-family:var(--fh);font-size:1.15rem;font-weight:700;color:#fff;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-.lf-lab{font-size:.62rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.09em;margin-top:.15rem;font-weight:600}
+.lf-lab{font-size:.62rem;color:rgba(255,255,255,.68);text-transform:uppercase;letter-spacing:.09em;margin-top:.15rem;font-weight:600}
 
 /* ── FORMULAIRE ── */
 .right{display:flex;align-items:center;justify-content:center;padding:3rem 2rem;overflow-y:auto;min-height:100vh}
@@ -58,7 +56,7 @@ input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,38,58,.08)}
 .flash.success{border-color:#CDE5D4;color:#175C33}
 .flash.warning{border-color:#EBDCC3;color:#7C4A0B}
 .flash.info{border-color:#D3DEF2;color:#1E3C77}
-.eye-btn{position:absolute;right:.8rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:0;line-height:1;display:flex}
+.eye-btn{min-width:24px;min-height:24px;position:absolute;right:.8rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:0;line-height:1;display:flex}
 .forgot-link{font-weight:500;font-size:.72rem;color:var(--accent);text-decoration:none}
 .forgot-link:hover{text-decoration:underline}
 .trust{display:flex;gap:1.2rem;justify-content:center;margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid var(--border)}

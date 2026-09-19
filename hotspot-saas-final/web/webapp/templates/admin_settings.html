@@ -41,7 +41,7 @@
   <form method="POST" action="{{ url_for('admin_settings') }}" autocomplete="off">
     {{ csrf_field() }}
     <!-- Bouton par défaut (touche Entrée) : enregistre, ne déclenche pas un test -->
-    <button type="submit" name="action" value="save" aria-hidden="true"
+    <button type="submit" name="action" value="save" aria-hidden="true" tabindex="-1"
             style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0"></button>
 
     {% for group in groups %}
@@ -59,15 +59,15 @@
           </label>
 
           {% elif f.type == 'select' %}
-          <label class="form-label">{{ f.label }}</label>
-          <select class="form-input" name="{{ f.key }}">
+          <label class="form-label" for="f_{{ f.key }}">{{ f.label }}</label>
+          <select class="form-input" id="f_{{ f.key }}" name="{{ f.key }}">
             {% for val, lbl in f.options %}
             <option value="{{ val }}" {% if f.value == val %}selected{% endif %}>{{ lbl }}</option>
             {% endfor %}
           </select>
 
           {% else %}
-          <label class="form-label">
+          <label class="form-label" for="f_{{ f.key }}">
             {{ f.label }}
             {% if f.secret %}
               {% if f.configured %}<span class="badge-cfg on">configuré</span>
@@ -75,6 +75,7 @@
             {% endif %}
           </label>
           <input class="form-input"
+                 id="f_{{ f.key }}"
                  type="{{ 'password' if f.type == 'password' else ('number' if f.type == 'number' else 'text') }}"
                  name="{{ f.key }}"
                  value="{{ '' if f.secret else f.value }}"

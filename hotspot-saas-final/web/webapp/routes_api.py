@@ -240,11 +240,21 @@ def cron_check_expiry():
         expired_devices.append({"id": device["id"], "label": device["label"]})
 
     conn.commit()
+
+    # Durées de conservation (loi n° 2019-014, art. 16 et 89) : les données
+    # dont la durée est dépassée sont effacées à chaque passage quotidien.
+    import privacy
+    try:
+        purged = privacy.run_retention(conn)
+    except Exception as e:
+        print(f"[CRON] purge des données échouée : {e}", flush=True)
+        purged = {"erreur": str(e)}
     conn.close()
 
     return jsonify({
         "expired":         expired,
         "expiring":        expiring,
         "expired_devices": expired_devices,
+        "purge":           purged,
         "checked_at":      datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })

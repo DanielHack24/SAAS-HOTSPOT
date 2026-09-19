@@ -4,9 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Créer un compte — HotspotPro</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23122639'/><path d='M8 16.5a10 10 0 0 1 16 0' stroke='%23E8630A' stroke-width='2.2' stroke-linecap='round' fill='none'/><path d='M11 19.5a6 6 0 0 1 10 0' stroke='white' stroke-width='2.2' stroke-linecap='round' fill='none'/><circle cx='16' cy='23' r='1.5' fill='white'/></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
 <style>
 :root{
   --bg:#F4F5F7;--surface:#fff;--ink:#131720;--muted:#5B6472;--border:#E3E6EA;
@@ -107,6 +105,11 @@ input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,38,58,.08)}
 }
 
 @media(max-width:800px){body{grid-template-columns:1fr}.left{display:none}.right{padding:2rem 1.4rem}}
+
+.consent{display:flex;gap:.55rem;align-items:flex-start;margin:.9rem 0;
+  font-size:.78rem;line-height:1.5;text-align:left}
+.consent input{margin-top:.2rem;width:16px;height:16px;flex:none;accent-color:#C2410C}
+.opt{font-weight:400;opacity:.8}
 </style>
 </head>
 <body>
@@ -167,8 +170,12 @@ input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,38,58,.08)}
           <input type="email" name="email" placeholder="vous@exemple.com" required value="{{ request.form.get('email','') }}">
         </div>
         <div class="fg">
-          <label>Téléphone</label>
-          <input type="tel" name="phone" placeholder="90 00 00 00" value="{{ request.form.get('phone','') }}">
+          <label for="phone">Téléphone <span class="opt">(facultatif)</span></label>
+          <input id="phone" type="tel" name="phone" placeholder="90 00 00 00"
+                 value="{{ request.form.get('phone','') }}"
+                 aria-describedby="phone-hint">
+          <div class="hint" id="phone-hint">Sert uniquement à vous joindre en cas
+          de problème sur votre installation.</div>
         </div>
       </div>
       <div class="fg2">
@@ -182,6 +189,13 @@ input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,38,58,.08)}
           <input type="password" name="password2" placeholder="Confirmez" required>
         </div>
       </div>
+
+      <label class="consent">
+        <input type="checkbox" name="accept_terms" value="1" required>
+        <span>J'accepte les <a href="/legal/conditions" target="_blank" rel="noopener">conditions
+        d'utilisation</a> et la <a href="/legal/confidentialite" target="_blank" rel="noopener">politique
+        de confidentialité</a>.</span>
+      </label>
       <button type="submit" class="submit">Créer mon compte</button>
     </form>
     <div class="form-foot">Déjà un compte ? <a href="{{ url_for('login') }}">Se connecter</a></div>

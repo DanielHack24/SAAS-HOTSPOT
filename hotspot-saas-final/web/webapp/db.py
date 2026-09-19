@@ -195,6 +195,19 @@ def init_web_db():
         "ALTER TABLE clients ADD COLUMN reset_token_expires TEXT DEFAULT NULL",
         "ALTER TABLE clients ADD COLUMN avatar_color TEXT DEFAULT NULL",
         "ALTER TABLE support_tickets ADD COLUMN client_id INTEGER DEFAULT NULL",
+        # Preuve du consentement (version des conditions + date d'acceptation)
+        # et compte anonymisé après suppression (paiements gardés 10 ans).
+        "ALTER TABLE clients ADD COLUMN terms_version TEXT DEFAULT NULL",
+        "ALTER TABLE clients ADD COLUMN terms_accepted_at TEXT DEFAULT NULL",
+        "ALTER TABLE clients ADD COLUMN deleted_at TEXT DEFAULT NULL",
+        "ALTER TABLE pending_registrations ADD COLUMN terms_version TEXT DEFAULT NULL",
+        "ALTER TABLE pending_registrations ADD COLUMN terms_accepted_at TEXT DEFAULT NULL",
+        # Demande expresse d'exécution immédiate (renonciation encadrée au
+        # délai de rétractation, loi n° 2017-07 art. 47).
+        "ALTER TABLE payments ADD COLUMN terms_version TEXT DEFAULT NULL",
+        "ALTER TABLE payments ADD COLUMN immediate_consent_at TEXT DEFAULT NULL",
+        "ALTER TABLE mikrotik_payments ADD COLUMN terms_version TEXT DEFAULT NULL",
+        "ALTER TABLE mikrotik_payments ADD COLUMN immediate_consent_at TEXT DEFAULT NULL",
     ):
         try:
             c.execute(ddl)

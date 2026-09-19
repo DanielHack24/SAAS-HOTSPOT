@@ -18,6 +18,18 @@
 {% endblock %}
 
 {% block content %}
+<style>
+.consent{display:flex;gap:.55rem;align-items:flex-start;margin:.9rem 0;
+  font-size:.78rem;line-height:1.5;text-align:left}
+.consent input{margin-top:.2rem;width:16px;height:16px;flex:none;accent-color:#C2410C}
+
+.danger-zone{margin-top:1.1rem;border:1px solid #EFD2CF;border-radius:9px;padding:.85rem 1rem;background:#FFF8F7}
+.danger-zone summary{cursor:pointer;font-weight:600;color:#8C1D18}
+.danger-zone[open] summary{margin-bottom:.7rem}
+.muted-text{font-size:.85rem;color:var(--muted);line-height:1.6;margin:.4rem 0 .9rem}
+.btn-danger{background:#8C1D18;color:#fff;border:1px solid #8C1D18}
+.btn-danger:hover{background:#6E1713}
+</style>
 <div style="max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:1.1rem">
 
   <!-- Profil -->
@@ -30,13 +42,14 @@
       {{ csrf_field() }}
       <input type="hidden" name="action" value="update_profile">
       <div class="form-group">
-        <label class="form-label">Nom complet</label>
-        <input class="form-input" type="text" name="full_name"
-               value="{{ client.full_name }}" required>
+        <label class="form-label" for="full_name">Nom complet</label>
+        <input class="form-input" id="full_name" type="text" name="full_name"
+               value="{{ client.full_name }}" autocomplete="name" required>
       </div>
       <div class="form-group">
         <label class="form-label">Email <span style="color:var(--muted);font-weight:400">(non modifiable)</span></label>
-        <input class="form-input" type="email" value="{{ client.email }}" disabled>
+        <input class="form-input" id="email_ro" type="email" value="{{ client.email }}"
+               aria-label="Adresse e-mail (non modifiable)" disabled>
       </div>
       <div class="form-group">
         <label class="form-label">Téléphone</label>
@@ -90,6 +103,41 @@
       </div>
       <button type="submit" class="btn btn-outline">Changer le mot de passe</button>
     </form>
+  </div>
+
+  <!-- Données personnelles : copie et suppression (loi n° 2019-014) -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Mes données personnelles
+    </div>
+    <p class="muted-text">Vous pouvez télécharger une copie de vos données ou
+    supprimer définitivement votre compte. Voir la
+    <a href="/legal/confidentialite">politique de confidentialité</a>.</p>
+    <p><a class="btn btn-outline" href="{{ url_for('account_export') }}">
+      Télécharger mes données (JSON)</a></p>
+
+    <details class="danger-zone">
+      <summary>Supprimer mon compte</summary>
+      <p class="muted-text">La suppression est <strong>immédiate et
+      définitive</strong> : compte, abonnements, configuration, vendeurs,
+      tickets et historique de ventes sont effacés. Les paiements déjà
+      encaissés sont conservés dix ans sans vos coordonnées, comme l'exige la
+      réglementation comptable.</p>
+      <form method="POST" action="{{ url_for('account_delete') }}">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label class="form-label" for="del_pwd">Votre mot de passe</label>
+          <input class="form-input" id="del_pwd" type="password" name="password"
+                 autocomplete="current-password" required>
+        </div>
+        <label class="consent">
+          <input type="checkbox" name="confirm_delete" value="1" required>
+          <span>Je confirme vouloir supprimer mon compte et mes données.</span>
+        </label>
+        <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+      </form>
+    </details>
   </div>
 
   <!-- Historique paiements -->

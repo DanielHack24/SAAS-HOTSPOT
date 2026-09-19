@@ -25,7 +25,10 @@ except Exception as _e:          # pragma: no cover
 @admin_required
 def admin_dashboard():
     conn     = get_db()
-    clients  = conn.execute("SELECT * FROM clients ORDER BY created_at DESC").fetchall()
+    # Les comptes supprimés ne subsistent que comme coquilles anonymes
+    # rattachées aux paiements conservés : ils n'ont pas à être listés.
+    clients  = conn.execute("SELECT * FROM clients WHERE deleted_at IS NULL "
+                            "ORDER BY created_at DESC").fetchall()
     payments = conn.execute("""
         SELECT p.*, c.full_name, c.email
         FROM payments p JOIN clients c ON p.client_id=c.id
@@ -365,8 +368,11 @@ def admin_client(cid):
 @login_required
 @admin_required
 def admin_client_delete(cid):
-    """Supprime un opérateur ET toutes ses données (abonnements, paiements,
-    routeurs, appareils VPN, tenant provisionné). Irréversible."""
+    """Supprime un opérateur et toutes ses données (abonnements, routeurs,
+    appareils VPN, tenant provisionné, support). Irréversible. Les paiements
+    encaissés sont gardés 10 ans (OHADA) sur un compte anonymisé : voir
+    privacy.delete_client_account."""
+    import privacy
     conn = get_db()
     row = conn.execute("SELECT * FROM clients WHERE id=?", (cid,)).fetchone()
     if not row:
@@ -377,43 +383,17 @@ def admin_client_delete(cid):
         conn.close()
         flash("Impossible de supprimer un compte administrateur ici.", "error")
         return redirect(url_for("admin_dashboard"))
-    client = dict(row)
-    email  = client["email"]
+    name = row["full_name"]
 
-    slugs = [r["slug"] for r in conn.execute(
-        "SELECT slug FROM subscriptions WHERE client_id=? AND slug IS NOT NULL AND slug!=''",
-        (cid,)).fetchall()]
-    slugs += [r["slug"] for r in conn.execute(
-        "SELECT slug FROM mikrotik_devices WHERE client_id=? AND slug IS NOT NULL AND slug!=''",
-        (cid,)).fetchall()]
-    slugs = list(dict.fromkeys(slugs))
-
-    # 1) Démontage des tenants (bot, fichiers, registre central) + WireGuard
-    for slug in slugs:
-        if PROVISIONER_OK:
-            for fn in ("stop_tenant", "remove_tenant_files", "delete_tenant"):
-                try:
-                    getattr(core, fn)(slug)
-                except Exception as e:
-                    print(f"[ADMIN] delete {slug} {fn}: {e}", flush=True)
-        try:
-            import wg_store
-            wg_store.delete_all_for_slug(slug)
-        except Exception as e:
-            print(f"[ADMIN] wg cleanup {slug}: {e}", flush=True)
-
-    # 2) Nettoyage base web (enfants -> parent)
-    conn.execute("DELETE FROM notifications WHERE client_id=?", (cid,))
-    conn.execute("DELETE FROM mikrotik_payments WHERE client_id=?", (cid,))
-    conn.execute("DELETE FROM mikrotik_devices WHERE client_id=?", (cid,))
-    conn.execute("DELETE FROM payments WHERE client_id=?", (cid,))
-    conn.execute("DELETE FROM subscriptions WHERE client_id=?", (cid,))
-    conn.execute("DELETE FROM pending_registrations WHERE email=?", (email,))
-    conn.execute("DELETE FROM clients WHERE id=?", (cid,))
+    res = privacy.delete_client_account(conn, cid)
     conn.commit()
     conn.close()
 
-    flash(f"Compte « {client['full_name']} » et toutes ses données ont été supprimés.", "success")
+    msg = f"Compte « {name} » et toutes ses données ont été supprimés."
+    if res["anonymized"]:
+        msg += (f" {res['kept_payments']} paiement(s) encaissé(s) conservé(s) "
+                "sans données personnelles (obligation comptable de 10 ans).")
+    flash(msg, "success")
     return redirect(url_for("admin_dashboard"))
 
 

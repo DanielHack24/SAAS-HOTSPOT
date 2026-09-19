@@ -188,6 +188,9 @@ remote_copy() {
 
   if rclone copy "$ARCHIVE" "$dest" --quiet --low-level-retries 2 --retries 2; then
     logger -t hotspotpro-backup "Copie distante OK ($DEST_TYPE -> ${BACKUP_HOST:-$BACKUP_RCLONE_REMOTE})"
+    # Meme duree de conservation qu'en local : sans cela les copies distantes
+    # s'accumuleraient sans limite, contrairement a la politique annoncee.
+    rclone delete "$dest" --min-age "${KEEP_DAYS}d" --include "hotspotpro_*.tar.gz*"       --quiet --low-level-retries 1 --retries 1       || logger -t hotspotpro-backup "Purge distante (> ${KEEP_DAYS} j) incomplete"
   else
     logger -t hotspotpro-backup "ECHEC copie distante ($DEST_TYPE -> ${BACKUP_HOST:-$BACKUP_RCLONE_REMOTE})"
     telegram_alert "ALERTE HotspotPro : la sauvegarde locale a reussi mais la COPIE DISTANTE ($DEST_TYPE) a echoue sur $(hostname). Verifier l'hote, les identifiants et le reseau."

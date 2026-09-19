@@ -75,7 +75,8 @@
               <button type="button" onclick="copyScript(this, 'script-{{ loop.index }}')" class="btn btn-primary btn-sm">Copier</button>
             </div>
             <textarea id="script-{{ loop.index }}" style="display:none;position:absolute;opacity:0;pointer-events:none" aria-hidden="true">{{ scripts_by_profile[name] }}</textarea>
-            <div class="code-body">{{ scripts_by_profile[name] }}</div>
+            <div class="code-body" tabindex="0" role="region"
+                 aria-label="Script RouterOS pour le profil {{ name }}">{{ scripts_by_profile[name] }}</div>
           </div>
         </div>
         {% endfor %}
@@ -92,7 +93,8 @@
               <button type="button" onclick="copyScript(this, 'raw-script')" class="btn btn-primary btn-sm">Copier</button>
             </div>
             <textarea id="raw-script" style="display:none;position:absolute;opacity:0;pointer-events:none" aria-hidden="true">{{ oneliner }}</textarea>
-            <div class="code-body">{{ oneliner }}</div>
+            <div class="code-body" tabindex="0" role="region"
+                 aria-label="Script RouterOS de notification de vente">{{ oneliner }}</div>
           </div>
         </div>
       {% endif %}

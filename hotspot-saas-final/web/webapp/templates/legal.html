@@ -4,62 +4,99 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ page.title }} — HotspotPro</title>
+<meta name="description" content="{{ page.description }}">
 <meta name="robots" content="index, follow">
+<link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
 <style>
-  :root{--ink:#0a0a12;--muted:#6b6b7a;--accent:#ff4d1c;--line:rgba(10,10,18,.1);--bg:#f4f1eb;--panel:#0a0a12}
+  /* Couleurs vérifiées avec axe-core (WCAG 2.2 AA, contraste >= 4.5:1) */
+  :root{
+    --bg:#F4F5F7;--surface:#fff;--ink:#131720;--muted:#4E5766;--border:#D9DEE5;
+    --panel:#0E1B29;--accent:#9A3412;
+    --fh:'Archivo','Segoe UI',Arial,sans-serif;
+    --fb:'Public Sans','Segoe UI',Arial,sans-serif;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-       line-height:1.65}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--fb);line-height:1.65}
   a{color:var(--accent)}
-  .topbar{background:var(--panel);padding:1.1rem 6%;display:flex;align-items:center;gap:.6rem}
-  .topbar a{display:flex;align-items:center;gap:.55rem;text-decoration:none;color:#fff;font-weight:700;font-size:1.05rem;
-            font-family:'Times New Roman',Georgia,serif;font-style:italic}
-  .topbar .dot{width:26px;height:26px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center}
-  main{max-width:760px;margin:0 auto;padding:3rem 1.4rem 4rem}
-  h1{font-family:'Times New Roman',Georgia,serif;font-size:2rem;letter-spacing:-.02em;margin:0 0 .3rem}
-  .updated{color:var(--muted);font-size:.82rem;margin:0 0 2rem}
-  .content h2{font-size:1.12rem;margin:2rem 0 .6rem;letter-spacing:-.01em}
-  .content p,.content li{color:#33333f;font-size:.95rem}
-  .content p.lead{font-size:1.05rem;color:var(--ink);border-left:3px solid var(--accent);padding-left:1rem;margin:0 0 1.6rem}
-  .content ul{padding-left:1.2rem;margin:.4rem 0 1rem}
-  .content li{margin-bottom:.4rem}
-  .backhome{display:inline-block;margin-top:2.5rem;font-size:.9rem;text-decoration:none;color:var(--muted)}
-  .backhome:hover{color:var(--accent)}
-  footer{background:var(--panel);color:rgba(255,255,255,.4);padding:1.6rem 6%;font-size:.78rem;text-align:center}
-  footer a{color:rgba(255,255,255,.55);text-decoration:none;margin:0 .5rem}
-  footer a:hover{color:#fff}
+  a:focus-visible,button:focus-visible,summary:focus-visible{
+    outline:3px solid #1D4ED8;outline-offset:2px;border-radius:3px}
+  .skip{position:absolute;left:-9999px;top:0;background:#fff;color:var(--ink);
+        padding:.7rem 1rem;z-index:10;border:2px solid var(--accent)}
+  .skip:focus{left:.6rem;top:.6rem}
+  header.topbar{background:var(--panel);padding:1.1rem 6%;display:flex;
+        align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  .topbar .brand{display:flex;align-items:center;gap:.55rem;text-decoration:none;
+        color:#fff;font-weight:700;font-size:1.05rem;font-family:var(--fh)}
+  .topbar .dot{width:26px;height:26px;border-radius:8px;background:var(--accent);
+        display:flex;align-items:center;justify-content:center}
+  .topnav{display:flex;gap:1rem;flex-wrap:wrap}
+  .topnav a{color:rgba(255,255,255,.82);text-decoration:none;font-size:.82rem}
+  .topnav a[aria-current="page"]{color:#fff;text-decoration:underline}
+  .topnav a:hover{color:#fff;text-decoration:underline}
+  main{max-width:820px;margin:0 auto;padding:2.6rem 1.4rem 4rem}
+  h1{font-family:var(--fh);font-size:2rem;letter-spacing:-.02em;margin:0 0 .3rem}
+  .updated{color:var(--muted);font-size:.85rem;margin:0 0 2rem}
+  .content h2{font-family:var(--fh);font-size:1.18rem;margin:2.2rem 0 .6rem}
+  .content p,.content li,.content td,.content th{font-size:.95rem}
+  .content p,.content li{color:#2B303B}
+  .content p.lead{font-size:1.05rem;color:var(--ink);border-left:4px solid var(--accent);
+        margin:0 0 1.8rem;background:#fff;padding:1rem 1rem 1rem 1.2rem}
+  .content ul,.content ol{padding-left:1.3rem;margin:.4rem 0 1rem}
+  .content li{margin-bottom:.45rem}
+  .content code{font-family:'JetBrains Mono',Consolas,monospace;font-size:.86rem;
+        background:#EAEDF1;padding:.1rem .35rem;border-radius:4px}
+  .table-wrap{overflow-x:auto;margin:.8rem 0 1.4rem;border:1px solid var(--border);
+        border-radius:9px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;min-width:480px}
+  th,td{text-align:left;padding:.65rem .8rem;border-bottom:1px solid var(--border);
+        vertical-align:top}
+  th{background:#EDF0F4;font-weight:600;color:var(--ink)}
+  tbody tr:last-child td{border-bottom:none}
+  .backhome{display:inline-block;margin-top:2.5rem;font-size:.92rem}
+  footer{background:var(--panel);color:rgba(255,255,255,.82);padding:1.8rem 6%;
+        font-size:.82rem;text-align:center}
+  footer a{color:rgba(255,255,255,.82);text-decoration:none;margin:0 .45rem}
+  footer a:hover{color:#fff;text-decoration:underline}
+  footer p{margin:.8rem 0 0;color:rgba(255,255,255,.72)}
   @media (prefers-color-scheme:dark){
-    :root{--bg:#111119;--ink:#f2f2f5;--muted:#9a9aa8;--line:rgba(255,255,255,.12)}
-    .content p,.content li{color:#cfcfd8}
+    :root{--bg:#12141A;--surface:#1B1E26;--ink:#F2F3F6;--muted:#AEB6C2;
+          --border:#333946;--accent:#F0A87E}
+    .content p,.content li{color:#DCE0E7}
+    .content code{background:#2A2E38}
+    th{background:#242833}
+    .content p.lead{background:var(--surface)}
   }
 </style>
 </head>
 <body>
-  <div class="topbar">
-    <a href="/">
-      <span class="dot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/></svg></span>
+  <a class="skip" href="#contenu">Aller au contenu</a>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="dot" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#fff" stroke="none"/></svg></span>
       HotspotPro
     </a>
-  </div>
+    <nav class="topnav" aria-label="Pages légales">
+      {% for key, p in pages.items() %}
+      <a href="/legal/{{ key }}"{% if key == slug %} aria-current="page"{% endif %}>{{ p.title }}</a>
+      {% endfor %}
+    </nav>
+  </header>
 
-  <main>
+  <main id="contenu">
     <h1>{{ page.title }}</h1>
-    <p class="updated">Derniere mise a jour : {{ updated }}</p>
+    <p class="updated">Dernière mise à jour : {{ updated }}</p>
     <div class="content">
       {{ page.body|safe }}
     </div>
-    <a class="backhome" href="/">&larr; Retour a l'accueil</a>
+    <a class="backhome" href="/">&larr; Retour à l'accueil</a>
   </main>
 
   <footer>
     <div>
-      <a href="/legal/conditions">Conditions</a>·
-      <a href="/legal/confidentialite">Confidentialite</a>·
-      <a href="/legal/mentions-legales">Mentions legales</a>·
+      {% for key, p in pages.items() %}<a href="/legal/{{ key }}">{{ p.title }}</a>{% endfor %}
       <a href="mailto:{{ contact }}">{{ contact }}</a>
     </div>
-    <p style="margin:.7rem 0 0">© 2026 HotspotPro</p>
+    <p>© 2026 HotspotPro</p>
   </footer>
 </body>
 </html>

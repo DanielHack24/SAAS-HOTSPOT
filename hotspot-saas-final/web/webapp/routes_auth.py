@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from flask import render_template, request, redirect, url_for, session, flash
 
 import config
+from legal_content import TERMS_VERSION
 from webapp_core import app
 from db import get_db
 from security import (hash_password, verify_password,
@@ -80,10 +81,12 @@ def _gen_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
-def _create_account(conn, email, name, phone, pwd_hash) -> int:
+def _create_account(conn, email, name, phone, pwd_hash,
+                    terms_version=None, terms_accepted_at=None) -> int:
     conn.execute(
-        "INSERT INTO clients (email, password_hash, full_name, phone) VALUES (?,?,?,?)",
-        (email, pwd_hash, name, phone))
+        "INSERT INTO clients (email, password_hash, full_name, phone, "
+        "terms_version, terms_accepted_at) VALUES (?,?,?,?,?,?)",
+        (email, pwd_hash, name, phone or None, terms_version, terms_accepted_at))
     conn.commit()
     return conn.execute("SELECT id FROM clients WHERE email=?", (email,)).fetchone()["id"]
 
@@ -117,7 +120,11 @@ def register():
             flash("Le mot de passe doit faire au moins 8 caractères.", "error")
         elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             flash("Email invalide.", "error")
+        elif request.form.get("accept_terms") != "1":
+            # Consentement exprès (loi n° 2019-014, art. 14 et 35).
+            flash("Vous devez accepter les conditions d'utilisation et la politique de confidentialité pour créer un compte.", "error")
         else:
+            terms_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             conn = get_db()
             if conn.execute("SELECT 1 FROM clients WHERE email=?", (email,)).fetchone():
                 conn.close()
@@ -132,10 +139,11 @@ def register():
                 conn.execute("DELETE FROM pending_registrations WHERE email=?", (email,))
                 conn.execute("""INSERT INTO pending_registrations
                                   (email, full_name, phone, password_hash, plan,
-                                   code_hash, expires_at)
-                                VALUES (?,?,?,?,?,?,?)""",
-                             (email, name, phone, hash_password(pwd), plan,
-                              _hash_code(code), expires))
+                                   code_hash, expires_at, terms_version,
+                                   terms_accepted_at)
+                                VALUES (?,?,?,?,?,?,?,?,?)""",
+                             (email, name, phone or None, hash_password(pwd), plan,
+                              _hash_code(code), expires, TERMS_VERSION, terms_at))
                 conn.commit()
                 conn.close()
                 session["pending_email"] = email
@@ -145,7 +153,8 @@ def register():
 
             # Pas d'e-mail configuré (dev/local) : création directe
             try:
-                cid = _create_account(conn, email, name, phone, hash_password(pwd))
+                cid = _create_account(conn, email, name, phone, hash_password(pwd),
+                                      TERMS_VERSION, terms_at)
                 conn.close()
             except sqlite3.IntegrityError:
                 conn.close()
@@ -205,7 +214,8 @@ def register_verify():
         name, phone, pwd_hash, plan = (row["full_name"], row["phone"],
                                        row["password_hash"], row["plan"])
         try:
-            cid = _create_account(conn, email, name, phone, pwd_hash)
+            cid = _create_account(conn, email, name, phone, pwd_hash,
+                                  row["terms_version"], row["terms_accepted_at"])
         except sqlite3.IntegrityError:
             conn.execute("DELETE FROM pending_registrations WHERE email=?", (email,))
             conn.commit(); conn.close()

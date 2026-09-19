@@ -45,7 +45,8 @@ def test_fiche_refuse_non_admin(client):
 
 
 def test_suppression_efface_tout(client):
-    cid = _make_operator()
+    """Sans paiement encaisse, tout disparaît, compte compris."""
+    cid = _make_operator()          # paiement cree en statut 'pending'
     _login_admin(client)
     r = client.post(f"/admin/client/{cid}/delete", data={"csrf_token": "tok"})
     assert r.status_code in (302, 303)

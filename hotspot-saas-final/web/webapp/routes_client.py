@@ -7,6 +7,8 @@ import re, json, secrets, ipaddress
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, Response
 
 import config
+from datetime import datetime
+from legal_content import TERMS_VERSION
 import fedapay
 import mikrotik_scripts as mks
 import services
@@ -641,6 +643,10 @@ def mikrotik_add():
         if not is_valid_ip(ip):
             flash("Adresse IP invalide.", "error")
             return render_template("mikrotik_add.html", sub=sub, plans=config.PLANS)
+        if request.form.get("accept_terms") != "1":
+            flash("Cochez la case d'acceptation des conditions et de démarrage immédiat du service pour continuer.", "error")
+            return render_template("mikrotik_add.html", sub=sub, plans=config.PLANS)
+        consent_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         conn = get_db()
         cur = conn.execute("""
@@ -663,9 +669,12 @@ def mikrotik_add():
             )
             conn = get_db()
             conn.execute("""
-                INSERT INTO mikrotik_payments (client_id, device_id, plan, amount, method, reference, status)
-                VALUES (?, ?, ?, ?, 'fedapay', ?, 'pending')
-            """, (client["id"], device_id, plan, p["price"], trans_id))
+                INSERT INTO mikrotik_payments (client_id, device_id, plan, amount, method,
+                                               reference, status, terms_version,
+                                               immediate_consent_at)
+                VALUES (?, ?, ?, ?, 'fedapay', ?, 'pending', ?, ?)
+            """, (client["id"], device_id, plan, p["price"], trans_id,
+                  TERMS_VERSION, consent_at))
             conn.commit()
             conn.close()
             return redirect(payment_url)
@@ -778,3 +787,57 @@ def account():
     return render_template("account.html", client=client,
                            payments=payments, plans=config.PLANS,
                            avatar_colors=AVATAR_COLORS)
+
+
+# ═══════════════════════════════════════════════
+# DONNÉES PERSONNELLES : copie et suppression (loi n° 2019-014, art. 39-48)
+# ═══════════════════════════════════════════════
+
+@app.route("/account/export")
+@login_required
+def account_export():
+    """Copie de ses données personnelles, en JSON téléchargeable."""
+    import json
+    import privacy
+    conn = get_db()
+    data = privacy.export_client_data(conn, session["client_id"])
+    conn.close()
+    body = json.dumps(data, ensure_ascii=False, indent=2)
+    stamp = datetime.now().strftime("%Y%m%d")
+    return Response(body, mimetype="application/json; charset=utf-8", headers={
+        "Content-Disposition": f'attachment; filename="hotspotpro-mes-donnees-{stamp}.json"',
+        "Cache-Control": "no-store"})
+
+
+@app.route("/account/delete", methods=["POST"])
+@login_required
+def account_delete():
+    """Suppression définitive du compte par son titulaire : mot de passe et
+    confirmation explicite exigés, pour éviter une suppression accidentelle
+    ou provoquée à son insu."""
+    import privacy
+    client = current_client()
+    if client.get("is_admin"):
+        flash("Un compte administrateur ne peut pas être supprimé ici.", "error")
+        return redirect(url_for("account"))
+    if request.form.get("confirm_delete") != "1":
+        flash("Cochez la case de confirmation pour supprimer votre compte.", "error")
+        return redirect(url_for("account"))
+
+    conn = get_db()
+    row = conn.execute("SELECT password_hash FROM clients WHERE id=?",
+                       (client["id"],)).fetchone()
+    ok, _ = verify_password(row["password_hash"], request.form.get("password", ""))
+    if not ok:
+        conn.close()
+        flash("Mot de passe incorrect : compte non supprimé.", "error")
+        return redirect(url_for("account"))
+
+    privacy.delete_client_account(conn, client["id"])
+    conn.commit()
+    conn.close()
+    session.clear()
+    flash("Votre compte et vos données ont été supprimés. Les paiements "
+          "encaissés sont conservés sans vos coordonnées, pour les obligations "
+          "comptables.", "success")
+    return redirect(url_for("index"))
