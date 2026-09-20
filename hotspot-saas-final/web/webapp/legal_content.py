@@ -277,10 +277,10 @@ d'opposition pour motif légitime et de suppression de vos données (articles 39
 à 50 de la loi n° 2019-014).</p>
 <ul>
   <li><strong>En autonomie</strong>, depuis la page <em>Mon compte</em> : modifier
-  vos informations, télécharger une copie de vos données, supprimer votre
-  compte.</li>
+  vos informations, supprimer votre compte.</li>
   <li><strong>Par e-mail</strong>, à <a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>,
-  pour toute autre demande. Nous répondons dans un délai d'un mois au plus.</li>
+  pour obtenir une copie de vos données ou pour toute autre demande. Nous
+  répondons dans un délai d'un mois au plus.</li>
 </ul>
 <p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir
 l'<strong>Instance de protection des données à caractère personnel
@@ -384,7 +384,7 @@ forfait et même après le délai de rétractation.</p>
   <li>Écrivez à <a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a> depuis
   l'adresse de votre compte.</li>
   <li>Indiquez la référence du paiement, visible dans l'e-mail de confirmation
-  et dans la copie de vos données téléchargeable depuis <em>Mon compte</em>.</li>
+  et dans l'historique de <em>Mon compte</em>.</li>
   <li>Nous accusons réception et vous remboursons dans un délai de
   <strong>dix jours</strong>, par le même moyen de paiement lorsque c'est
   possible, sans frais pour vous.</li>

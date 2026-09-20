@@ -112,13 +112,6 @@
       <form method="POST" action="{{ url_for('subscribe_checkout') }}" class="checkout-form">
         {{ csrf_field() }}
         <input type="hidden" name="plan" value="{{ key }}">
-        <label class="consent">
-          <input type="checkbox" name="accept_terms" value="1" required>
-          <span>J'accepte les <a href="/legal/conditions" target="_blank" rel="noopener">conditions</a>
-          et je demande le démarrage immédiat du service. Je conserve mon droit de
-          rétractation de dix jours ouvrables, au prorata des jours restants
-          (<a href="/legal/remboursement" target="_blank" rel="noopener">détails</a>).</span>
-        </label>
         <button type="submit" class="price-cta">Choisir ce plan</button>
       </form>
     </div>

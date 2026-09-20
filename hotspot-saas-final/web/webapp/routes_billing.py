@@ -36,12 +36,10 @@ def subscribe_checkout():
         flash("Plan invalide.", "error")
         return redirect(url_for("subscribe"))
     p = config.PLANS[plan]
-    # Acceptation des conditions + demande expresse de démarrage immédiat
-    # (loi n° 2017-07, art. 47 ; voir la politique de remboursement).
-    if request.form.get("accept_terms") != "1":
-        flash("Cochez la case d'acceptation des conditions et de démarrage immédiat du service pour continuer.", "error")
-        return redirect(url_for("subscribe", plan=plan))
-    consent_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Plus de case « demande expresse de démarrage immédiat » à la commande :
+    # immediate_consent_at reste donc vide. Consentement non demandé =
+    # consentement non enregistré (les lignes déjà remplies sont conservées).
+    consent_at = None
 
     try:
         trans_id, payment_url = fedapay.create_transaction(

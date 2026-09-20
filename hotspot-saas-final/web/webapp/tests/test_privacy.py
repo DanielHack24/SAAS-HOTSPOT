@@ -97,33 +97,41 @@ def test_consentement_enregistre_avec_version_et_date(client, monkeypatch):
     assert row["terms_accepted_at"]
 
 
-def test_paiement_refuse_sans_demande_expresse(client):
+def test_page_des_prix_sans_case_de_demarrage_immediat(client):
+    """La case de renonciation encadrée a été retirée des pages de commande."""
     cid = _account()
     _login(client, cid)
-    r = client.post("/subscribe/checkout", data={"csrf_token": "tok", "plan": "3m"},
-                    follow_redirects=False)
-    assert r.status_code in (302, 303)
-    assert fetch_all("SELECT * FROM payments WHERE client_id=?", (cid,)) == []
+    html = client.get("/subscribe").get_data(as_text=True)
+    assert 'name="accept_terms"' not in html
+    assert "démarrage immédiat" not in html
 
 
-# ── Droit d'accès : copie des données ────────────────────────────
+# ── Droit d'accès : copie des données, sur demande ───────────────
 
-def test_export_contient_les_donnees_et_masque_les_secrets(client):
+def test_plus_de_telechargement_en_libre_service(client):
+    """Le client ne télécharge plus ses données : la route n'existe plus et
+    la page Mon compte n'y renvoie pas."""
     cid = _account(email="export@test.tg")
+    _login(client, cid)
+    assert client.get("/account/export").status_code == 404
+    html = client.get("/account").get_data(as_text=True)
+    assert "/account/export" not in html
+
+
+def test_copie_des_donnees_reste_possible_et_masque_les_secrets():
+    """Le droit d'accès reste honoré : une demande reçue par e-mail est
+    servie avec privacy.export_client_data(), sans exposer les jetons."""
+    cid = _account(email="acces@test.tg")
     conn = get_db()
     conn.execute("""INSERT INTO subscriptions (client_id, plan, start_date, end_date,
                                                active, bot_token)
                     VALUES (?, '3m', ?, ?, 1, 'SECRET-TOKEN-1234')""",
                  (cid, _ago(10), _ago(-80)))
     conn.commit()
+    data = privacy.export_client_data(conn, cid)
     conn.close()
-    _login(client, cid)
-    r = client.get("/account/export")
-    assert r.status_code == 200
-    data = r.get_json()
-    assert data["compte"]["email"] == "export@test.tg"
+    assert data["compte"]["email"] == "acces@test.tg"
     assert data["abonnements"][0]["bot_token"] == "…1234"
-    assert "SECRET-TOKEN-1234" not in r.get_data(as_text=True)
 
 
 # ── Droit de suppression ─────────────────────────────────────────

@@ -643,10 +643,9 @@ def mikrotik_add():
         if not is_valid_ip(ip):
             flash("Adresse IP invalide.", "error")
             return render_template("mikrotik_add.html", sub=sub, plans=config.PLANS)
-        if request.form.get("accept_terms") != "1":
-            flash("Cochez la case d'acceptation des conditions et de démarrage immédiat du service pour continuer.", "error")
-            return render_template("mikrotik_add.html", sub=sub, plans=config.PLANS)
-        consent_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Plus de case « demande expresse de démarrage immédiat » : le
+        # consentement n'étant pas demandé, il n'est pas enregistré.
+        consent_at = None
 
         conn = get_db()
         cur = conn.execute("""
@@ -834,24 +833,10 @@ def submit_review():
 
 
 # ═══════════════════════════════════════════════
-# DONNÉES PERSONNELLES : copie et suppression (loi n° 2019-014, art. 39-48)
+# DONNÉES PERSONNELLES : suppression du compte (loi n° 2019-014, art. 39-48)
 # ═══════════════════════════════════════════════
-
-@app.route("/account/export")
-@login_required
-def account_export():
-    """Copie de ses données personnelles, en JSON téléchargeable."""
-    import json
-    import privacy
-    conn = get_db()
-    data = privacy.export_client_data(conn, session["client_id"])
-    conn.close()
-    body = json.dumps(data, ensure_ascii=False, indent=2)
-    stamp = datetime.now().strftime("%Y%m%d")
-    return Response(body, mimetype="application/json; charset=utf-8", headers={
-        "Content-Disposition": f'attachment; filename="hotspotpro-mes-donnees-{stamp}.json"',
-        "Cache-Control": "no-store"})
-
+# Le téléchargement en libre-service a été retiré. Le droit d'accès reste dû :
+# une demande reçue par e-mail se sert de privacy.export_client_data().
 
 @app.route("/account/delete", methods=["POST"])
 @login_required
