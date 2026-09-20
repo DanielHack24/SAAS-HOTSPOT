@@ -147,8 +147,16 @@ def register():
                 conn.commit()
                 conn.close()
                 session["pending_email"] = email
-                email_verification_code(email, name, code)
-                flash("Un code de vérification vient de vous être envoyé par e-mail.", "info")
+                err = email_verification_code(email, name, code)
+                if err:
+                    # Annoncer un envoi qui a échoué laisserait le visiteur
+                    # attendre un code qui n'arrivera jamais.
+                    flash("Impossible d'envoyer le code de vérification. "
+                          "Contactez le support ou réessayez dans un instant.",
+                          "error")
+                else:
+                    flash("Un code de vérification vient de vous être envoyé par e-mail.",
+                          "info")
                 return redirect(url_for("register_verify"))
 
             # Pas d'e-mail configuré (dev/local) : création directe
@@ -261,8 +269,9 @@ def register_resend():
     conn.commit()
     name = row["full_name"]
     conn.close()
-    email_verification_code(email, name, code)
-    flash("Nouveau code envoyé.", "info")
+    err = email_verification_code(email, name, code)
+    flash("Envoi impossible pour le moment. Contactez le support." if err
+          else "Nouveau code envoyé.", "error" if err else "info")
     return redirect(url_for("register_verify"))
 
 

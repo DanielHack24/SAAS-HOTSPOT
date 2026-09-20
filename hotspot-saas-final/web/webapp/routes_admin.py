@@ -521,20 +521,29 @@ def _test_telegram_alert():
 
 
 def _test_brevo_key():
-    import urllib.request
-    key = config._setting("brevo_api_key")
-    if not key:
-        flash("Renseignez et enregistrez d'abord la clé API Brevo.", "error")
+    """Envoie un VRAI email de test à l'administrateur connecté.
+
+    Valider la clé sur /v3/account ne prouve rien : la cause la plus
+    fréquente de « aucun mail n'arrive » est un expéditeur non validé chez
+    Brevo, ce qui n'apparaît qu'au moment d'un envoi réel.
+    """
+    import emails
+    dest = (session.get("email") or config.ADMIN_EMAIL or "").strip()
+    if not dest:
+        flash("Aucune adresse administrateur connue pour recevoir le test.", "error")
         return
-    try:
-        req = urllib.request.Request("https://api.brevo.com/v3/account",
-                                     headers={"api-key": key, "Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            ok = r.status == 200
-        flash("Clé Brevo valide — emails opérationnels." if ok
-              else "Clé Brevo invalide.", "success" if ok else "error")
-    except Exception:
-        flash("Clé Brevo invalide ou service injoignable.", "error")
+    inner = ("<h1 style=\"font-family:Georgia,serif;font-size:1.4rem;color:#0a0a12;"
+             "margin:0 0 .6rem\">Test d'envoi réussi</h1>"
+             "<p style=\"color:#6b6b7a;font-size:.92rem;line-height:1.65;margin:0\">"
+             "Si vous lisez ce message, les emails de HotspotPro (code de "
+             "vérification, bienvenue, mot de passe oublié) partent correctement.</p>")
+    err = emails.try_send(dest, "Admin HotspotPro",
+                          "HotspotPro : test d'envoi", emails._layout(inner))
+    if err:
+        flash(f"Envoi impossible. {err}", "error")
+    else:
+        flash(f"Email de test envoyé à {dest} — vérifiez la boîte de réception "
+              "et le dossier spam.", "success")
 
 
 _SAFE_REMOTE_FIELD = re.compile(r"[A-Za-z0-9._@/ -]+")
