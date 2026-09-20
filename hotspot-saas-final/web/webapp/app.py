@@ -43,9 +43,15 @@ def index():
     # sinon la landing retombe sur l'image PNG animée.
     import os
     import legal_content
+    import reviews
+    from db import get_db
     glb = os.path.join(app.static_folder or "static", "3d", "router.glb")
+    conn = get_db()
+    testimonials = reviews.for_landing(conn)
+    conn.close()
     return render_template("landing.html", plans=config.PLANS,
                            has_router_3d=os.path.exists(glb),
+                           testimonials=testimonials,
                            contact_email=legal_content.CONTACT_EMAIL,
                            support_bot_username=config.support_bot_username())
 

@@ -105,6 +105,65 @@
     </form>
   </div>
 
+  <!-- Avis client : publié après validation par l'administrateur -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.9 6.3 6.6.7-4.9 4.4 1.4 6.6L12 16.8 6 20l1.4-6.6L2.5 9l6.6-.7z"/></svg>
+      Donner mon avis
+    </div>
+
+    {% if my_review and my_review.status == 'published' %}
+    <p class="muted-text">Votre avis est affiché sur la page d'accueil. Merci !
+    Vous pouvez en envoyer un nouveau : il sera publié après validation.</p>
+    {% elif my_review %}
+    <p class="muted-text">Votre avis a bien été reçu le {{ my_review.created_at }}.
+    Il sera publié après validation.</p>
+    {% else %}
+    <p class="muted-text">Votre retour aide d'autres opérateurs à se décider.
+    Il n'est publié qu'après validation.</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('submit_review') }}">
+      {{ csrf_field() }}
+      <div class="form-group">
+        <label class="form-label" for="rev_name">Nom affiché</label>
+        <input class="form-input" id="rev_name" type="text" name="author_name"
+               value="{{ my_review.author_name if my_review else client.full_name }}"
+               maxlength="60">
+        <div class="form-hint">Par exemple « Koami A. » : vous n'êtes pas obligé
+        d'afficher votre nom complet.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="rev_role">Activité et ville <span style="font-weight:400;color:var(--muted)">(facultatif)</span></label>
+        <input class="form-input" id="rev_role" type="text" name="author_role"
+               value="{{ my_review.author_role if my_review else '' }}"
+               placeholder="Opérateur hotspot — Lomé" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="rev_stars">Note</label>
+        <select class="form-input" id="rev_stars" name="stars">
+          {% for n in [5, 4, 3, 2, 1] %}
+          <option value="{{ n }}" {% if my_review and my_review.stars == n %}selected{% endif %}>{{ n }} / 5</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="rev_quote">Votre avis</label>
+        <textarea class="form-input" id="rev_quote" name="quote" rows="4"
+                  maxlength="400" required minlength="20"
+                  placeholder="Ce que la plateforme vous apporte au quotidien…">{{ my_review.quote if my_review else '' }}</textarea>
+        <div class="form-hint">400 caractères au maximum.</div>
+      </div>
+      <label class="consent">
+        <input type="checkbox" name="accept_publication" value="1" required>
+        <span>J'autorise HotspotPro à publier cet avis, avec le nom affiché et
+        l'activité indiquée, sur son site public. Je peux demander son retrait à
+        tout moment.</span>
+      </label>
+      <button type="submit" class="btn btn-primary">Envoyer mon avis</button>
+    </form>
+  </div>
+
   <!-- Données personnelles : copie et suppression (loi n° 2019-014) -->
   <div class="card">
     <div class="card-title">

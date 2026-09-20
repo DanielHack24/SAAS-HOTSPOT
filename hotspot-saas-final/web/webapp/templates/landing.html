@@ -644,9 +644,37 @@ footer{background:var(--panel);color:rgba(255,255,255,.55)}
   </div>
 </section>
 
-<!-- Section témoignages retirée : les avis affichés n'étaient pas des
-     avis réels de clients (voir l'historique Git pour les restaurer
-     s'ils proviennent de clients ayant consenti à être cités). -->
+<!-- ── TÉMOIGNAGES (marquee) ── -->
+<!-- Les avis publiés par l'administrateur (page Administration > Avis clients)
+     arrivent en tête de liste ; la suite vient de reviews.DEMO_TESTIMONIALS. -->
+{% if testimonials %}
+<section class="testi-sec" id="temoignages">
+  <div class="sec-label">Témoignages</div>
+  <h2 class="how-h2">Ils font confiance à HotspotPro</h2>
+  <div class="testi-marquee">
+    <div class="testi-track">
+      {% for dup in range(2) %}
+      <div style="display:flex;gap:1rem" {% if dup == 1 %}aria-hidden="true"{% endif %}>
+        {% for quote, name, role, color, stars in testimonials %}
+        <div class="testi-card">
+          <div class="testi-stars" role="img" aria-label="{{ stars }} étoiles sur 5">
+            {% for i in range(5) %}
+            <svg class="{% if i >= stars %}off{% endif %}" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            {% endfor %}
+          </div>
+          <p class="testi-quote">«&nbsp;{{ quote }}&nbsp;»</p>
+          <div class="testi-by">
+            <div class="testi-av" style="background:{{ color }}" aria-hidden="true">{{ name[0] }}</div>
+            <div><div class="testi-name">{{ name }}</div><div class="testi-role">{{ role }}</div></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 
 <!-- ── CTA FINAL ── -->
 <section class="cta-final">

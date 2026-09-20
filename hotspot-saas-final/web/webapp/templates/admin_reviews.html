@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Avis clients — Administration{% endblock %}
+{% block content %}
+<style>
+.rev{border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;margin-bottom:.9rem;background:var(--surface)}
+.rev-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
+.rev-who{font-weight:600}
+.rev-meta{font-size:.76rem;color:var(--muted)}
+.rev-quote{margin:.7rem 0 .9rem;line-height:1.6}
+.rev-stars{color:#B45309;letter-spacing:.06em}
+.rev-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.rev-actions form{display:inline}
+.btn-danger{background:#8C1D18;color:#fff;border:1px solid #8C1D18}
+.btn-danger:hover{background:#6E1713}
+.empty{color:var(--muted);font-size:.9rem;margin:.6rem 0 1.4rem}
+</style>
+
+<div class="page-head">
+  <h1 class="page-title">Avis clients</h1>
+  <p class="page-sub">Les avis affichés apparaissent dans le carrousel de la
+  page d'accueil, avec les témoignages déjà en place.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">En attente ({{ pending|length }})</div>
+  {% if not pending %}
+  <p class="empty">Aucun avis en attente.</p>
+  {% endif %}
+  {% for r in pending %}
+  <div class="rev">
+    <div class="rev-head">
+      <div>
+        <div class="rev-who">{{ r.author_name }}</div>
+        <div class="rev-meta">{{ r.author_role or "—" }} · {{ r.email or "compte supprimé" }} · reçu le {{ r.created_at }}</div>
+      </div>
+      <div class="rev-stars" aria-label="Note : {{ r.stars }} sur 5">{{ "★" * r.stars }}{{ "☆" * (5 - r.stars) }}</div>
+    </div>
+    <p class="rev-quote">« {{ r.quote }} »</p>
+    <div class="rev-actions">
+      <form method="POST" action="{{ url_for('admin_review_action', tid=r.id, action='publish') }}">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-primary">Afficher sur le site</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin_review_action', tid=r.id, action='delete') }}"
+            onsubmit="return confirm('Supprimer définitivement cet avis ?')">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-title">Affichés sur le site ({{ published|length }})</div>
+  {% if not published %}
+  <p class="empty">Aucun avis client affiché pour le moment.</p>
+  {% endif %}
+  {% for r in published %}
+  <div class="rev">
+    <div class="rev-head">
+      <div>
+        <div class="rev-who">{{ r.author_name }}</div>
+        <div class="rev-meta">{{ r.author_role or "—" }} · affiché depuis le {{ r.published_at }}</div>
+      </div>
+      <div class="rev-stars" aria-label="Note : {{ r.stars }} sur 5">{{ "★" * r.stars }}{{ "☆" * (5 - r.stars) }}</div>
+    </div>
+    <p class="rev-quote">« {{ r.quote }} »</p>
+    <div class="rev-actions">
+      <form method="POST" action="{{ url_for('admin_review_action', tid=r.id, action='unpublish') }}">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-outline">Retirer du site</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin_review_action', tid=r.id, action='delete') }}"
+            onsubmit="return confirm('Supprimer définitivement cet avis ?')">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

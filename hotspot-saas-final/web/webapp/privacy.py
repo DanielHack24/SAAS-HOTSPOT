@@ -101,6 +101,7 @@ def delete_client_account(conn, cid: int) -> dict:
     conn.execute("DELETE FROM support_accounts WHERE client_id=?", (cid,))
     conn.execute("DELETE FROM support_link_tokens WHERE client_id=?", (cid,))
     conn.execute("DELETE FROM support_notify_state WHERE client_id=?", (cid,))
+    conn.execute("DELETE FROM testimonials WHERE client_id=?", (cid,))
 
     kept = (conn.execute("SELECT COUNT(*) FROM payments WHERE client_id=?", (cid,)).fetchone()[0]
             + conn.execute("SELECT COUNT(*) FROM mikrotik_payments WHERE client_id=?",

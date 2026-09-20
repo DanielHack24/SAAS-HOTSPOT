@@ -20,6 +20,10 @@ sep()   { echo -e "\n${B}==========================================${R}"; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB_DIR="/opt/hotspot-saas-web"
 SAAS_DIR="/opt/hotspot-saas"
+# Saisie des réglages : valeurs du fichier hotspotpro.conf si présentes,
+# sinon questions (voir deploy/lib_ask.sh).
+source "$(dirname "${BASH_SOURCE[0]}")/lib_ask.sh"
+
 OPS_DIR="/etc/hotspotpro"
 OPS_ENV="$OPS_DIR/ops.env"
 
@@ -58,10 +62,8 @@ else
   NEW_PASSPHRASE=1
 fi
 
-read -rp "  > Token du bot d'alerte [${EXISTING_BOT:-vide = alertes désactivées}] : " ADMIN_BOT_TOKEN
-ADMIN_BOT_TOKEN="${ADMIN_BOT_TOKEN:-$EXISTING_BOT}"
-read -rp "  > Chat ID admin [${EXISTING_CHAT:-vide}] : " ADMIN_CHAT_ID
-ADMIN_CHAT_ID="${ADMIN_CHAT_ID:-$EXISTING_CHAT}"
+ask ADMIN_BOT_TOKEN "Token du bot d'alerte (vide = alertes désactivées)" "$EXISTING_BOT"
+ask ADMIN_CHAT_ID "Chat ID admin" "$EXISTING_CHAT"
 
 echo
 echo -e "  ${C}La destination des sauvegardes (SMB/TrueNAS, SFTP, cloud) et ses"
@@ -94,7 +96,7 @@ if [ "$NEW_PASSPHRASE" = "1" ]; then
   echo -e "  ${Y}Sans elle, les sauvegardes chiffrées sont IRRÉCUPÉRABLES si le${R}"
   echo -e "  ${Y}serveur est perdu. Elle n'est jamais envoyée avec les sauvegardes.${R}"
   sep
-  read -rp "  > Appuyez sur Entrée une fois la phrase secrète sauvegardée… " _
+  ask_pause "Appuyez sur Entrée une fois la phrase secrète sauvegardée…"
 fi
 
 if [ -n "$ADMIN_BOT_TOKEN" ] && [ -n "$ADMIN_CHAT_ID" ]; then
@@ -232,7 +234,7 @@ sep
 echo -e "  ${B}5/5 — HTTPS avec Let's Encrypt (optionnel)${R}"
 echo
 echo -e "  ${C}Nécessite un domaine dont l'enregistrement A pointe déjà vers ce VPS.${R}"
-read -rp "  > Nom de domaine (ex: hotspotpro.tg) [vide = passer] : " DOMAIN
+ask DOMAIN "Nom de domaine (ex: mondomaine.tg) [vide = passer]" ""
 
 if [ -n "$DOMAIN" ]; then
   apt-get install -y -qq certbot python3-certbot-nginx > /dev/null
@@ -241,7 +243,12 @@ if [ -n "$DOMAIN" ]; then
     sed -i "s|server_name _;|server_name $DOMAIN;|" "$NGINX_CONF"
     nginx -t && systemctl reload nginx
   fi
-  if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect; then
+  if [ -n "${CERTBOT_EMAIL:-}" ]; then
+    CERTBOT_ID=(--email "$CERTBOT_EMAIL")
+  else
+    CERTBOT_ID=(--register-unsafely-without-email)
+  fi
+  if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos "${CERTBOT_ID[@]}" --redirect; then
     ok "Certificat installé, renouvellement automatique activé"
     WEB_ENV="$WEB_DIR/.env"
     if [ -f "$WEB_ENV" ]; then

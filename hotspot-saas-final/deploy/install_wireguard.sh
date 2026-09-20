@@ -46,8 +46,7 @@ export HOTSPOT_SAAS_DIR="$SAAS_DIR"
 info "Détection de l'adresse publique…"
 AUTO_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "")
 DEFAULT_EP="${VPS_PUBLIC_IP:-$AUTO_IP}"
-read -rp "  > Adresse publique du VPS (IP ou domaine) [${DEFAULT_EP}] : " ENDPOINT
-ENDPOINT="${ENDPOINT:-$DEFAULT_EP}"
+ask ENDPOINT "Adresse publique du VPS (IP ou domaine)" "$DEFAULT_EP"
 [ -n "$ENDPOINT" ] || error "Adresse publique requise."
 ok "Endpoint : $ENDPOINT:$WG_PORT (UDP)"
 

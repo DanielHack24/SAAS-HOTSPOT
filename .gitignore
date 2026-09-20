@@ -13,3 +13,6 @@ venv/
 vps_ip.txt
 tenants/
 .mcp.json
+
+# Reglages d'installation du serveur (contient des secrets)
+hotspotpro.conf

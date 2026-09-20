@@ -21,6 +21,10 @@ echo "  ╚═══════════════════════
 echo -e "${R}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Saisie des réglages : valeurs du fichier hotspotpro.conf si présentes,
+# sinon questions (voir deploy/lib_ask.sh).
+source "$(dirname "${BASH_SOURCE[0]}")/../deploy/lib_ask.sh"
+
 WEB_DIR="/opt/hotspot-saas-web"
 SAAS_DIR="/opt/hotspot-saas"
 VENV="$WEB_DIR/venv"
@@ -32,10 +36,9 @@ info "Détection de l'IP publique du VPS…"
 AUTO_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "")
 if [ -n "$AUTO_IP" ]; then
   echo -e "  IP détectée automatiquement : ${G}${B}$AUTO_IP${R}"
-  read -rp "  ▶ Confirmer ou entrer une autre IP [$AUTO_IP] : " ENTERED_IP
-  VPS_PUBLIC_IP="${ENTERED_IP:-$AUTO_IP}"
+  ask VPS_PUBLIC_IP "Confirmer ou entrer une autre IP" "$AUTO_IP"
 else
-  read -rp "  ▶ Entrez l'IP publique de ce VPS : " VPS_PUBLIC_IP
+  ask VPS_PUBLIC_IP "Entrez l'IP publique de ce VPS" ""
 fi
 ok "IP VPS configurée : $VPS_PUBLIC_IP"
 
@@ -79,20 +82,15 @@ SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 CRON_KEY=$(python3 -c "import secrets; print(secrets.token_hex(16))")
 HUB_KEY=$(python3 -c "import secrets; print(secrets.token_hex(16))")
 
-read -rp "  ▶ Votre nom (affiché sur la page de paiement) : " OWNER_NAME_INPUT
-OWNER_NAME_INPUT="${OWNER_NAME_INPUT:-HotspotPro}"
-
-read -rp "  ▶ URL publique du site (ex: https://hotspotpro.hopto.org) : " APP_URL_INPUT
-APP_URL_INPUT="${APP_URL_INPUT:-http://$VPS_PUBLIC_IP}"
+ask OWNER_NAME_INPUT "Votre nom (affiché sur la page de paiement)" "HotspotPro"
+ask APP_URL_INPUT "URL publique du site (ex: https://mondomaine.tg)" "http://$VPS_PUBLIC_IP"
 
 # ── Compte administrateur ─────────────────────────────────────────
 hr
 echo -e "${B}  🔐  Compte administrateur${R}"
 echo
-read -rp "  ▶ Email admin [admin@hotspotpro.tg] : " ADMIN_EMAIL_INPUT
-ADMIN_EMAIL_INPUT="${ADMIN_EMAIL_INPUT:-admin@hotspotpro.tg}"
-read -rsp "  ▶ Mot de passe admin (vide = généré aléatoirement) : " ADMIN_PASSWORD_INPUT
-echo
+ask ADMIN_EMAIL_INPUT "Email admin" "admin@hotspotpro.tg"
+ask_secret ADMIN_PASSWORD_INPUT "Mot de passe admin (vide = généré aléatoirement)" ""
 if [ -z "$ADMIN_PASSWORD_INPUT" ]; then
   ADMIN_PASSWORD_INPUT=$(python3 -c "import secrets; print(secrets.token_urlsafe(12))")
   ADMIN_PWD_GENERATED=1
@@ -105,11 +103,9 @@ echo
 echo -e "  ${Y}Brevo est gratuit jusqu'à 300 emails/jour.${R}"
 echo -e "  ${C}Créez un compte sur https://brevo.com puis copiez votre clé API.${R}"
 echo
-read -rp "  ▶ Clé API Brevo (xkeysib-...) [laisser vide pour ignorer] : " BREVO_KEY_INPUT
-read -rp "  ▶ Email expéditeur (ex: noreply@mondomaine.com) : " FROM_EMAIL_INPUT
-FROM_EMAIL_INPUT="${FROM_EMAIL_INPUT:-noreply@hotspotpro.tg}"
-read -rp "  ▶ Nom expéditeur [HotspotPro] : " FROM_NAME_INPUT
-FROM_NAME_INPUT="${FROM_NAME_INPUT:-HotspotPro}"
+ask BREVO_KEY_INPUT "Clé API Brevo (xkeysib-...) [vide = ignorer]" ""
+ask FROM_EMAIL_INPUT "Email expéditeur" "noreply@hotspotpro.tg"
+ask FROM_NAME_INPUT "Nom expéditeur" "HotspotPro"
 
 if [ -n "$BREVO_KEY_INPUT" ]; then
   ok "Brevo configuré — emails activés"
@@ -124,9 +120,9 @@ echo
 echo -e "  ${C}Créez un compte sur https://fedapay.com pour accepter les paiements en ligne.${R}"
 echo -e "  ${Y}Les clés ne sont JAMAIS stockées dans le code — uniquement dans $WEB_DIR/.env${R}"
 echo
-read -rp "  ▶ Clé secrète FedaPay (sk_live_... ou sk_sandbox_...) : " FEDAPAY_SECRET_INPUT
-read -rp "  ▶ Clé publique FedaPay (pk_live_... ou pk_sandbox_...) : " FEDAPAY_PUBLIC_INPUT
-read -rp "  ▶ Clé webhook FedaPay (wh_live_...) [REQUIS pour l'activation auto] : " FEDAPAY_WEBHOOK_INPUT
+ask_secret FEDAPAY_SECRET_INPUT "Clé secrète FedaPay (sk_live_... ou sk_sandbox_...)" ""
+ask FEDAPAY_PUBLIC_INPUT "Clé publique FedaPay (pk_live_...)" ""
+ask_secret FEDAPAY_WEBHOOK_INPUT "Clé webhook FedaPay (wh_live_...)" ""
 
 if [[ "$FEDAPAY_SECRET_INPUT" == *"sandbox"* ]]; then
   FEDAPAY_ENV_INPUT="sandbox"

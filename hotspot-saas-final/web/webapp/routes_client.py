@@ -777,16 +777,60 @@ def account():
             conn.close()
             return redirect(url_for("account"))
 
+    import reviews
     conn = get_db()
     payments = conn.execute(
         "SELECT * FROM payments WHERE client_id=? ORDER BY created_at DESC",
         (client["id"],)
     ).fetchall()
+    my_review = reviews.last_submission(conn, client["id"])
     conn.close()
 
     return render_template("account.html", client=client,
                            payments=payments, plans=config.PLANS,
+                           my_review=my_review,
                            avatar_colors=AVATAR_COLORS)
+
+
+@app.route("/avis", methods=["POST"])
+@login_required
+def submit_review():
+    """Avis client : enregistré en attente, publié par l'administrateur.
+
+    La publication du nom et de l'activité suppose l'accord de l'auteur : la
+    case de consentement du formulaire est donc obligatoire."""
+    import reviews
+    client = current_client()
+    quote = (request.form.get("quote") or "").strip()
+    name  = (request.form.get("author_name") or "").strip() or client["full_name"]
+    role  = (request.form.get("author_role") or "").strip()
+    stars = request.form.get("stars", "5")
+
+    if request.form.get("accept_publication") != "1":
+        flash("Cochez la case autorisant la publication de votre avis.", "error")
+        return redirect(url_for("account"))
+    if len(quote) < 20:
+        flash("Votre avis doit faire au moins 20 caractères.", "error")
+        return redirect(url_for("account"))
+
+    conn = get_db()
+    reviews.submit(conn, client["id"], name, role, quote, stars)
+    conn.commit()
+    conn.close()
+
+    # Alerte à l'administrateur (bot d'alerte, s'il est configuré)
+    try:
+        services.send_telegram_notify(
+            config.admin_bot_token(), config.admin_chat_id(),
+            f"💬 <b>Nouvel avis client</b>\n\n{name} ({client['email']})\n"
+            f"{'⭐' * max(1, min(5, int(stars or 5)))}\n\n{quote[:300]}\n\n"
+            "À afficher ou supprimer dans Administration > Avis.")
+    except Exception as e:
+        print(f"[AVIS] alerte admin impossible : {e}", flush=True)
+
+    flash("Merci ! Votre avis a été transmis. Il sera publié après validation.",
+          "success")
+    return redirect(url_for("account"))
 
 
 # ═══════════════════════════════════════════════

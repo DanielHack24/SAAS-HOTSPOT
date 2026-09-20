@@ -11,10 +11,14 @@
 # L'ordre ops AVANT wireguard est volontaire : install_ops active ufw, et
 # install_wireguard ajoute alors sa règle ufw 51820/udp sur un pare-feu actif.
 #
-# Chaque installeur reste interactif (il pose ses propres questions).
+# Réglages : si un fichier hotspotpro.conf existe à côté de ce script, ses
+# valeurs sont utilisées et NE SONT PAS redemandées (voir
+# hotspotpro.conf.example). Les valeurs absentes sont demandées à l'écran, ou
+# prises par défaut avec --auto.
 #
 # Usage :
-#   sudo bash install.sh                 # tout, dans l'ordre
+#   sudo bash install.sh                  # tout, dans l'ordre
+#   sudo bash install.sh --auto           # sans aucune question
 #   sudo bash install.sh web saas         # seulement ces étapes
 #   sudo bash install.sh ops              # relancer une étape
 #   Étapes valides : web  saas  ops  wireguard
@@ -38,17 +42,36 @@ declare -A STEP_DIR=(   [web]="web" [saas]="saas" [ops]="deploy" [wireguard]="de
 declare -A STEP_SH=(    [web]="install_web.sh" [saas]="install_saas.sh" [ops]="install_ops.sh" [wireguard]="install_wireguard.sh" )
 declare -A STEP_LABEL=( [web]="Interface web + nginx" [saas]="Moteur SaaS (hub)" [ops]="Exploitation (sauvegardes, ufw, HTTPS)" [wireguard]="Serveur WireGuard" )
 
-# ── Sélection des étapes (arguments, sinon toutes) ──
-if [ "$#" -gt 0 ]; then
-  SELECTED=()
-  for arg in "$@"; do
-    case "$arg" in
-      web|saas|ops|wireguard) SELECTED+=("$arg") ;;
-      *) error "Étape inconnue : '$arg' (valides : web saas ops wireguard)" ;;
-    esac
-  done
+# ── Fichier de réglages (facultatif) ──
+# Chargé AVANT les installeurs : chaque variable qu'il définit remplace la
+# question correspondante (voir deploy/lib_ask.sh).
+CONF="$ROOT/hotspotpro.conf"
+if [ -f "$CONF" ]; then
+  chmod 600 "$CONF" 2>/dev/null || true
+  set -a; source "$CONF"; set +a
+  CONF_LOADED=1
 else
-  SELECTED=("${STEP_KEYS[@]}")
+  CONF_LOADED=0
+fi
+
+# ── Arguments : étapes + options ──
+SELECTED=()
+for arg in "$@"; do
+  case "$arg" in
+    web|saas|ops|wireguard) SELECTED+=("$arg") ;;
+    --auto|-a|--yes|-y)     export HOTSPOT_AUTO=1 ;;
+    -h|--help)
+      echo "Usage : sudo bash install.sh [--auto] [web] [saas] [ops] [wireguard]"
+      exit 0 ;;
+    *) error "Argument inconnu : '$arg' (valides : web saas ops wireguard --auto)" ;;
+  esac
+done
+[ "${#SELECTED[@]}" -eq 0 ] && SELECTED=("${STEP_KEYS[@]}")
+
+# ── Dépendances minimales de l'installation ──
+export DEBIAN_FRONTEND=noninteractive
+if ! command -v curl > /dev/null 2>&1 || ! command -v python3 > /dev/null 2>&1; then
+  apt-get update -qq && apt-get install -y -qq curl python3 > /dev/null
 fi
 
 # ── Vérification préalable : les scripts existent ──
@@ -78,8 +101,18 @@ echo -e "    • Security Group : entrées ${B}80/tcp${R}, ${B}443/tcp${R}, ${B}
 echo -e "    • DNS : l'enregistrement A du domaine pointe déjà vers l'Elastic IP"
 echo -e "      (nécessaire pour le HTTPS de l'étape ops)"
 sep
-read -rp "  ▶ Tout est prêt ? Démarrer le déploiement ? [o/N] : " GO
-[[ "$GO" =~ ^[oO]$ ]] || { echo "  Annulé."; exit 0; }
+if [ "$CONF_LOADED" = "1" ]; then
+  ok "Réglages chargés depuis hotspotpro.conf"
+else
+  warn "Aucun hotspotpro.conf : les réglages seront demandés à l'écran."
+  warn "Pour une installation sans question : cp hotspotpro.conf.example hotspotpro.conf"
+fi
+if [ "${HOTSPOT_AUTO:-0}" = "1" ]; then
+  info "Mode automatique : aucune question ne sera posée."
+else
+  read -rp "  ▶ Tout est prêt ? Démarrer le déploiement ? [o/N] : " GO
+  [[ "$GO" =~ ^[oO]$ ]] || { echo "  Annulé."; exit 0; }
+fi
 
 # ── Exécution séquentielle ──
 STEP_NUM=1
@@ -115,6 +148,9 @@ echo -e "    curl http://127.0.0.1:8010/health"
 echo -e "    sudo wg show wg-hotspotpro"
 echo
 echo -e "  ${B}À faire ensuite :${R}"
-echo -e "    • FedaPay : webhook -> https://VOTRE-DOMAINE/webhook/fedapay (transaction.approved)"
-echo -e "    • Révoquer les anciennes clés FedaPay live exposées"
+echo -e "    • FedaPay : webhook -> ${APP_URL_INPUT:-https://VOTRE-DOMAINE}/webhook/fedapay (transaction.approved)"
+echo -e "    • Déclarer vos traitements de données auprès de l'IPDCP (ipdcp.tg)"
+echo -e "    • Compléter l'identité de l'éditeur dans webapp/legal_content.py"
+echo -e "      (adresse, RCCM, NIF, n° de récépissé IPDCP)"
+echo -e "    • Conserver hors du serveur la phrase secrète des sauvegardes"
 sep

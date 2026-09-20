@@ -181,6 +181,21 @@ def init_web_db():
             ts  REAL NOT NULL
         )
     """)
+    # Avis clients : « pending » tant que l'administrateur ne les a pas
+    # affichés, « published » une fois visibles sur la page d'accueil.
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS testimonials (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id    INTEGER REFERENCES clients(id),
+            author_name  TEXT NOT NULL,
+            author_role  TEXT DEFAULT '',
+            quote        TEXT NOT NULL,
+            stars        INTEGER DEFAULT 5,
+            status       TEXT DEFAULT 'pending',
+            created_at   TEXT DEFAULT (datetime('now','localtime')),
+            published_at TEXT
+        )
+    """)
     c.execute("CREATE INDEX IF NOT EXISTS idx_rate_attempts ON rate_attempts(key, ts)")
 
     # Migrations silencieuses pour bases existantes

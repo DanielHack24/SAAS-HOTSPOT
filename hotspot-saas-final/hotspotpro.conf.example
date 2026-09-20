@@ -1,0 +1,58 @@
+# ══════════════════════════════════════════════════════════════
+# hotspotpro.conf — Réglages de l'installation (facultatif)
+#
+#   cp hotspotpro.conf.example hotspotpro.conf
+#   nano hotspotpro.conf
+#   sudo bash install.sh
+#
+# Une valeur renseignée ici n'est PAS redemandée pendant l'installation.
+# Une valeur laissée vide est demandée à l'écran, sauf en mode automatique
+# (sudo bash install.sh --auto) où la valeur par défaut est utilisée.
+#
+# Ce fichier contient des secrets : il reste sur le serveur, n'est jamais
+# publié sur GitHub (voir .gitignore) et doit rester en lecture root
+# (chmod 600 hotspotpro.conf).
+# ══════════════════════════════════════════════════════════════
+
+# ── Identité du service ──────────────────────────────────────
+# Laisser VPS_PUBLIC_IP vide : l'adresse est détectée automatiquement.
+VPS_PUBLIC_IP=""
+# Nom affiché sur la page de paiement
+OWNER_NAME_INPUT="HotspotPro"
+# Adresse publique du site. Avec un domaine : https://mondomaine.tg
+APP_URL_INPUT=""
+
+# ── Compte administrateur de la plateforme ───────────────────
+ADMIN_EMAIL_INPUT="admin@mondomaine.tg"
+# Vide = mot de passe fort généré et affiché en fin d'installation
+ADMIN_PASSWORD_INPUT=""
+
+# ── E-mails transactionnels (Brevo) ──────────────────────────
+# Vide = e-mails désactivés (configurable plus tard dans l'administration)
+BREVO_KEY_INPUT=""
+FROM_EMAIL_INPUT="noreply@mondomaine.tg"
+FROM_NAME_INPUT="HotspotPro"
+
+# ── Paiements (FedaPay) ──────────────────────────────────────
+# Sans clé webhook, aucun paiement ne s'active automatiquement.
+FEDAPAY_SECRET_INPUT=""
+FEDAPAY_PUBLIC_INPUT=""
+FEDAPAY_WEBHOOK_INPUT=""
+
+# ── Alertes d'exploitation (bot Telegram d'administration) ───
+# Pannes, sauvegardes, saturation processeur, nouveaux avis clients.
+ADMIN_BOT_TOKEN=""
+ADMIN_CHAT_ID=""
+
+# ── HTTPS ────────────────────────────────────────────────────
+# Domaine dont l'enregistrement DNS pointe DÉJÀ vers ce serveur.
+# Renseigné : certificat Let's Encrypt demandé automatiquement.
+# Vide : le site reste en HTTP sur l'adresse IP.
+DOMAIN=""
+# E-mail pour les avertissements d'expiration de certificat (facultatif)
+CERTBOT_EMAIL=""
+
+# ── Tunnel WireGuard ─────────────────────────────────────────
+# Adresse que les routeurs des clients contacteront (IP ou domaine).
+# Vide = l'adresse IP publique détectée.
+ENDPOINT=""

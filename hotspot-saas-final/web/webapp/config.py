@@ -147,6 +147,10 @@ def support_chat_id() -> str:        return _setting("support_chat_id")
 def support_alert_email() -> str:    return _setting("support_alert_email")
 def support_webhook_secret() -> str: return _setting("support_webhook_secret")
 
+# Bot d'alerte de l'administrateur (pannes, sauvegardes, nouveaux avis)
+def admin_bot_token() -> str:     return _setting("admin_bot_token")
+def admin_chat_id() -> str:       return _setting("admin_chat_id")
+
 
 def mikrotik_https() -> bool:
     return str(_setting("mikrotik_https")).strip().lower() in ("1", "true", "yes", "on", "oui")

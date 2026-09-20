@@ -375,6 +375,10 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:1.2rem 0}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <span>Sécurité</span>
       </a>
+      <a href="{{ url_for('admin_reviews') }}" class="sb-item {% if request.endpoint in ('admin_reviews',) %}active{% endif %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.9 6.3 6.6.7-4.9 4.4 1.4 6.6L12 16.8 6 20l1.4-6.6L2.5 9l6.6-.7z"/></svg>
+        <span>Avis clients</span>
+      </a>
       <a href="{{ url_for('admin_support') }}" class="sb-item {% if request.endpoint=='admin_support' %}active{% endif %}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Support</span>

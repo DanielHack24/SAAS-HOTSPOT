@@ -364,6 +364,44 @@ def admin_client(cid):
                            svc=svc, plans=config.PLANS)
 
 
+@app.route("/admin/avis")
+@login_required
+@admin_required
+def admin_reviews():
+    """Avis reçus : en attente d'abord, puis ceux déjà affichés."""
+    import reviews
+    conn = get_db()
+    items = reviews.listing(conn)
+    conn.close()
+    return render_template("admin_reviews.html",
+                           pending=[r for r in items if r["status"] == "pending"],
+                           published=[r for r in items if r["status"] == "published"])
+
+
+@app.route("/admin/avis/<int:tid>/<action>", methods=["POST"])
+@login_required
+@admin_required
+def admin_review_action(tid, action):
+    """publish = ajouter au carrousel de la page d'accueil,
+    unpublish = l'en retirer, delete = supprimer définitivement."""
+    import reviews
+    conn = get_db()
+    if action == "publish":
+        done, msg = reviews.set_status(conn, tid, "published"), "Avis affiché sur le site."
+    elif action == "unpublish":
+        done, msg = reviews.set_status(conn, tid, "pending"), "Avis retiré du site."
+    elif action == "delete":
+        done, msg = reviews.remove(conn, tid), "Avis supprimé."
+    else:
+        conn.close()
+        flash("Action inconnue.", "error")
+        return redirect(url_for("admin_reviews"))
+    conn.commit()
+    conn.close()
+    flash(msg if done else "Avis introuvable.", "success" if done else "error")
+    return redirect(url_for("admin_reviews"))
+
+
 @app.route("/admin/client/<int:cid>/delete", methods=["POST"])
 @login_required
 @admin_required

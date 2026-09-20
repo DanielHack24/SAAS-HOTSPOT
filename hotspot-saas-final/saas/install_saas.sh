@@ -21,6 +21,10 @@ sep
 # ── Vérifications ──
 [ "$EUID" -ne 0 ] && error "Lancez ce script en root : sudo bash install_saas.sh"
 
+# Saisie des réglages : valeurs du fichier hotspotpro.conf si présentes,
+# sinon questions (voir deploy/lib_ask.sh).
+source "$(dirname "${BASH_SOURCE[0]}")/../deploy/lib_ask.sh"
+
 SAAS_DIR="/opt/hotspot-saas"
 WEB_DIR="/opt/hotspot-saas-web"
 WEB_ENV="$WEB_DIR/.env"
@@ -37,10 +41,9 @@ AUTO_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "")
 
 if [ -n "$AUTO_IP" ]; then
     echo -e "  IP détectée automatiquement : ${G}$AUTO_IP${R}"
-    read -rp "  ▶ Confirmer cette IP ? [Entrée pour oui, ou tapez une autre IP] : " ENTERED_IP
-    VPS_PUBLIC_IP="${ENTERED_IP:-$AUTO_IP}"
+    ask VPS_PUBLIC_IP "Confirmer cette IP ou en saisir une autre" "$AUTO_IP"
 else
-    read -rp "  ▶ Entrez l'IP publique de ce VPS : " VPS_PUBLIC_IP
+    ask VPS_PUBLIC_IP "Entrez l'IP publique de ce VPS" ""
     [ -z "$VPS_PUBLIC_IP" ] && error "IP publique requise."
 fi
 ok "IP VPS : $VPS_PUBLIC_IP"
