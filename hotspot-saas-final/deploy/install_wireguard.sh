@@ -19,6 +19,10 @@ sep()   { echo -e "\n${B}==========================================${R}"; }
 [ "$EUID" -ne 0 ] && error "Lancez en root : sudo bash install_wireguard.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Saisie des réglages : valeurs du fichier hotspotpro.conf si présentes,
+# sinon questions (voir deploy/lib_ask.sh).
+source "$SCRIPT_DIR/lib_ask.sh"
+
 WEB_DIR="/opt/hotspot-saas-web"
 SAAS_DIR="/opt/hotspot-saas"
 CORE_DIR="$SAAS_DIR/core"
